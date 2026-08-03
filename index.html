@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Absensi Guru</title>
+  <meta name="theme-color" content="#16233F">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- =====================================================
+       GANTI URL DI BAWAH INI dengan URL Web App GAS Anda
+       (Deploy → New deployment → Web app → Copy URL)
+       Lihat PANDUAN_GITHUB_PAGES.md untuk langkah lengkap.
+       ===================================================== -->
+  <script>
+    window.API_URL = "GANTI_DENGAN_URL_WEB_APP_GAS_ANDA";
+  </script>
+
+  <div class="app-shell">
+    <div class="brand">
+      <div class="mark">AG</div>
+      <div class="brand-text">Absensi Guru<small>Presensi lokasi &amp; selfie</small></div>
+    </div>
+
+    <div id="config-warning" class="error-msg" style="display:none; max-width:460px;"></div>
+
+    <!-- ============ LOGIN ============ -->
+    <div id="view-login" class="view active">
+      <div class="card">
+        <h1 class="title">Masuk</h1>
+        <p class="subtitle">Gunakan NIP dan kata sandi yang terdaftar untuk mengakses presensi.</p>
+
+        <label for="login-nip">NIP / ID Guru</label>
+        <input id="login-nip" type="text" inputmode="numeric" placeholder="Contoh: 19850101" autocomplete="username">
+
+        <label for="login-pass">Password</label>
+        <input id="login-pass" type="password" placeholder="Kata sandi" autocomplete="current-password">
+
+        <button id="btn-login" class="btn-primary" onclick="handleLogin()">Masuk</button>
+
+        <div id="login-error" class="error-msg"></div>
+      </div>
+    </div>
+
+    <!-- ============ ABSEN (GURU) ============ -->
+    <div id="view-absen" class="view">
+      <div class="topbar">
+        <div class="who">Masuk sebagai<br><b id="absen-nama-guru">-</b></div>
+        <div style="display:flex; gap:14px; align-items:center;">
+          <span id="absen-jam-sekarang" class="jam-live"></span>
+          <button class="logout-link" onclick="handleLogout()">Keluar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="title">Foto Selfie</h2>
+        <p class="subtitle">Pastikan wajah terlihat jelas saat mengambil foto.</p>
+
+        <div class="camera-box" id="camera-box">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <img id="camera-result" style="display:none;">
+          <canvas id="camera-canvas"></canvas>
+          <div class="camera-hint" id="camera-hint">Mengaktifkan kamera…</div>
+        </div>
+        <button class="btn-shutter" id="btn-shutter" onclick="ambilFoto()"></button>
+        <button class="btn-retake" id="btn-retake" style="display:none;" onclick="ambilUlang()">Ambil ulang foto</button>
+        <button class="btn-ghost btn-block" id="btn-retry-camera" style="display:none; margin-top:12px;" onclick="retryCamera()">Coba Lagi Aktifkan Kamera</button>
+
+        <div class="jarak-strip" id="jarak-strip">
+          <div class="jarak-ring">
+            <svg viewBox="0 0 44 44">
+              <circle class="gauge-track" cx="22" cy="22" r="18"></circle>
+              <circle id="gauge-fill" class="gauge-fill" cx="22" cy="22" r="18" stroke-dasharray="113.1" stroke-dashoffset="113.1"></circle>
+            </svg>
+          </div>
+          <div class="jarak-info">
+            <span class="jarak-meter"><span id="gauge-jarak">--</span> m dari sekolah</span>
+            <span id="gauge-status" class="gauge-status wait">Mendeteksi lokasi…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button id="btn-masuk" class="btn-masuk" onclick="kirimAbsen('Masuk')" disabled>Absen Masuk</button>
+        <button id="btn-pulang" class="btn-pulang" onclick="kirimAbsen('Pulang')" disabled>Absen Pulang</button>
+      </div>
+
+      <div id="absen-error" class="error-msg"></div>
+      <div id="absen-success" class="success-msg"></div>
+
+      <div class="today-summary">
+        <div class="today-box">
+          <div class="t">Absen Masuk</div>
+          <div class="j" id="ringkasan-masuk">—</div>
+        </div>
+        <div class="today-box">
+          <div class="t">Absen Pulang</div>
+          <div class="j" id="ringkasan-pulang">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ADMIN ============ -->
+    <div id="view-admin" class="view">
+      <div class="topbar">
+        <div class="who">Dasbor Admin<br><b id="admin-nama">-</b></div>
+        <button class="logout-link" onclick="handleLogout()">Keluar</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-btn-rekap" onclick="gantiTabAdmin('rekap')">Rekap Bulanan</button>
+        <button class="tab-btn" id="tab-btn-izin" onclick="gantiTabAdmin('izin')">Izin Dinas / Cuti</button>
+      </div>
+
+      <div id="tab-rekap" class="card wide">
+        <h2 class="title">Rekap Kehadiran Bulanan</h2>
+        <p class="subtitle">Pilih guru dan bulan untuk melihat rekap, lalu cetak sebagai Lampiran TPG (PDF).</p>
+
+        <div class="field-row">
+          <div>
+            <label>Guru</label>
+            <select id="rekap-nip"></select>
+          </div>
+          <div>
+            <label>Bulan</label>
+            <select id="rekap-bulan"></select>
+          </div>
+        </div>
+        <label>Tahun</label>
+        <input id="rekap-tahun" type="number" min="2020" max="2100">
+
+        <button class="btn-primary" onclick="muatRekap()">Tampilkan Rekap</button>
+        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-cetak-pdf" onclick="cetakPDF()" disabled>Cetak PDF Lampiran TPG</button>
+
+        <div id="rekap-error" class="error-msg"></div>
+        <div id="rekap-success" class="success-msg"></div>
+
+        <div class="table-scroll">
+          <table class="rekap" id="tabel-rekap" style="display:none;">
+            <thead>
+              <tr><th>Tanggal</th><th>Hari</th><th>Masuk</th><th>Status</th><th>Pulang</th><th>Status</th><th>Ket.</th></tr>
+            </thead>
+            <tbody id="tabel-rekap-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-izin" class="card wide" style="display:none;">
+        <h2 class="title">Input Izin Dinas / Cuti</h2>
+        <p class="subtitle">Guru yang terdaftar di sini tidak akan tercatat Alpa pada rentang tanggal tersebut.</p>
+
+        <div class="field-row">
+          <div>
+            <label>Tanggal Mulai</label>
+            <input id="izin-mulai" type="date">
+          </div>
+          <div>
+            <label>Tanggal Selesai</label>
+            <input id="izin-selesai" type="date">
+          </div>
+        </div>
+
+        <label>Guru</label>
+        <select id="izin-nip"></select>
+
+        <label>Jenis Presensi</label>
+        <select id="izin-jenis">
+          <option value="DL">DL — Dinas Luar</option>
+          <option value="C">C — Cuti Resmi</option>
+        </select>
+
+        <label>Keterangan</label>
+        <textarea id="izin-keterangan" rows="2" placeholder="Contoh: Mengikuti diklat kurikulum di Dinas Pendidikan"></textarea>
+
+        <button class="btn-primary" onclick="simpanIzin()">Simpan Izin / Dinas</button>
+        <div id="izin-error" class="error-msg"></div>
+        <div id="izin-success" class="success-msg"></div>
+
+        <h2 class="title" style="margin-top:26px; font-size:15px;">Riwayat Terbaru</h2>
+        <div class="table-scroll">
+          <table class="rekap" id="tabel-izin">
+            <thead><tr><th>Mulai</th><th>Selesai</th><th>NIP</th><th>Jenis</th><th>Keterangan</th></tr></thead>
+            <tbody id="tabel-izin-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot-note">
+      Absen hanya berhasil bila Anda berada di dalam radius yang ditentukan sekolah<br>
+      dan telah mengambil foto selfie melalui kamera depan.
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
