@@ -96,6 +96,18 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .btn-pulang{ background: var(--navy); color:#fff; }
 .action-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; margin-top:18px; }
 
+.absen-slot{ display:flex; flex-direction:column; gap:8px; }
+.absen-slot button{ width:100%; }
+.absen-selesai{
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  background: var(--emerald-soft); border:1px solid rgba(14,156,116,0.25);
+  border-radius: var(--radius-sm); padding:9px 8px;
+  font-size:12px; color:var(--emerald); text-align:center; line-height:1.4;
+}
+.absen-selesai .cek{ font-weight:700; }
+.absen-selesai b{ font-family:'IBM Plex Mono'; font-size:12.5px; }
+.absen-selesai .code-badge{ font-size:11px; padding:1px 7px; }
+
 .error-msg{ background: var(--rose-soft); color: var(--rose); padding:10px 13px; border-radius: var(--radius-sm); font-size:13px; margin-top:14px; display:none; }
 .success-msg{ background: var(--emerald-soft); color: var(--emerald); padding:10px 13px; border-radius: var(--radius-sm); font-size:13px; margin-top:14px; display:none; }
 
@@ -144,11 +156,6 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .code-DL{ background:#E7ECFB; color:#3B57C4; }
 .code-C{ background:#EFE7FB; color:#7A44C4; }
 .code-blank{ background:var(--line); color:var(--ink-soft); }
-
-.today-summary{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; margin-top:20px; }
-.today-box{ border:1.5px solid var(--line); border-radius:var(--radius-md); padding:12px; text-align:center; }
-.today-box .t{ font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:6px; }
-.today-box .j{ font-family:'IBM Plex Mono'; font-size:17px; font-weight:600; color:var(--navy); }
 
 /* ---------- ADMIN TABS ---------- */
 .tabs{ display:flex; gap:6px; width:100%; max-width:720px; margin-bottom:14px; }
