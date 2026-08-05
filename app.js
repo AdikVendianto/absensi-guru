@@ -116,9 +116,27 @@ function updateJamSekarang(){
 
 function renderStatusHariIni(res){
   statusHariIni = res;
-  setText('ringkasan-masuk', res.masuk ? (res.masuk.jam + ' · ' + res.masuk.status) : '—');
-  setText('ringkasan-pulang', res.pulang ? (res.pulang.jam + ' · ' + res.pulang.status) : '—');
+  tampilkanSelesai('masuk', res.masuk);
+  tampilkanSelesai('pulang', res.pulang);
   updateTombolState();
+}
+
+// Menampilkan kartu "✓ Tercatat pukul .." tepat menggantikan tombol yang
+// jenis absennya sudah terekam hari ini, sehingga tidak bisa absen ulang.
+function tampilkanSelesai(jenis, info){
+  const btn = document.getElementById('btn-' + jenis);
+  const kotak = document.getElementById('selesai-' + jenis);
+  if (info){
+    btn.style.display = 'none';
+    kotak.style.display = 'flex';
+    setText('jam-selesai-' + jenis, info.jam);
+    const badge = document.getElementById('kode-selesai-' + jenis);
+    badge.textContent = info.status;
+    badge.className = 'code-badge code-' + info.status;
+  } else {
+    btn.style.display = '';
+    kotak.style.display = 'none';
+  }
 }
 
 function startGeolocation(){
@@ -404,3 +422,4 @@ function muatRiwayatIzin(){
     ).join('');
   }).catch(() => {});
 }
+
