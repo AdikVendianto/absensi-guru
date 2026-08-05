@@ -18,7 +18,7 @@
        Lihat PANDUAN_GITHUB_PAGES.md untuk langkah lengkap.
        ===================================================== -->
   <script>
-    window.API_URL = "https://script.google.com/macros/s/AKfycbzOxjHJcc0IHU5xsQEJ_VAzYubtQPH0e3n74-s4l1PmKZBkTpUF_VjKESHAvl952LjM/exec";
+    window.API_URL = "GANTI_DENGAN_URL_WEB_APP_GAS_ANDA";
   </script>
 
   <div class="app-shell">
@@ -86,23 +86,24 @@
       </div>
 
       <div class="action-row">
-        <button id="btn-masuk" class="btn-masuk" onclick="kirimAbsen('Masuk')" disabled>Absen Masuk</button>
-        <button id="btn-pulang" class="btn-pulang" onclick="kirimAbsen('Pulang')" disabled>Absen Pulang</button>
+        <div class="absen-slot">
+          <button id="btn-masuk" class="btn-masuk" onclick="kirimAbsen('Masuk')" disabled>Absen Masuk</button>
+          <div class="absen-selesai" id="selesai-masuk" style="display:none;">
+            <span class="cek">✓</span> Tercatat pukul <b id="jam-selesai-masuk">--:--</b>
+            <span class="code-badge" id="kode-selesai-masuk"></span>
+          </div>
+        </div>
+        <div class="absen-slot">
+          <button id="btn-pulang" class="btn-pulang" onclick="kirimAbsen('Pulang')" disabled>Absen Pulang</button>
+          <div class="absen-selesai" id="selesai-pulang" style="display:none;">
+            <span class="cek">✓</span> Tercatat pukul <b id="jam-selesai-pulang">--:--</b>
+            <span class="code-badge" id="kode-selesai-pulang"></span>
+          </div>
+        </div>
       </div>
 
       <div id="absen-error" class="error-msg"></div>
       <div id="absen-success" class="success-msg"></div>
-
-      <div class="today-summary">
-        <div class="today-box">
-          <div class="t">Absen Masuk</div>
-          <div class="j" id="ringkasan-masuk">—</div>
-        </div>
-        <div class="today-box">
-          <div class="t">Absen Pulang</div>
-          <div class="j" id="ringkasan-pulang">—</div>
-        </div>
-      </div>
     </div>
 
     <!-- ============ ADMIN ============ -->
