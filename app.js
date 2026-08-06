@@ -366,9 +366,32 @@ async function muatRekap(){
     }).join('');
     document.getElementById('tabel-rekap').style.display = '';
     document.getElementById('btn-cetak-pdf').disabled = false;
+    renderRingkasanKehadiran(res.ringkasan);
   } catch (err){
     tampilkanPesan('rekap-error', 'Gagal memuat rekap: ' + err.message, 'error');
   }
+}
+
+function renderRingkasanKehadiran(r){
+  const el = document.getElementById('ringkasan-kehadiran');
+  if (!r){ el.style.display = 'none'; return; }
+  el.innerHTML =
+    '<div class="ringkasan-grid">' +
+      '<div class="ringkasan-item"><div class="n">' + r.H + '</div><div class="l">Tepat Waktu (H)</div></div>' +
+      '<div class="ringkasan-item"><div class="n">' + r.HT + '</div><div class="l">Terlambat (HT)</div></div>' +
+      '<div class="ringkasan-item"><div class="n">' + r.PA + '</div><div class="l">Pulang Cepat (PA)</div></div>' +
+      '<div class="ringkasan-item"><div class="n">' + r.A + '</div><div class="l">Alpa (A)</div></div>' +
+      '<div class="ringkasan-item"><div class="n">' + r.DL + '</div><div class="l">Dinas Luar (DL)</div></div>' +
+      '<div class="ringkasan-item"><div class="n">' + r.C + '</div><div class="l">Cuti (C)</div></div>' +
+    '</div>' +
+    (r.pulangTidakTercatat > 0
+      ? '<div class="ringkasan-catatan">Termasuk ' + r.pulangTidakTercatat + ' hari dengan catatan "Pulang tidak tercatat" (tetap dihitung H/HT).</div>'
+      : '') +
+    '<div class="ringkasan-total">' +
+      '<div class="n">' + r.jumlahKehadiran + ' <span style="font-size:14px; font-weight:500;">/ ' + r.hariKerja + ' hari kerja</span></div>' +
+      '<div class="l">Total Jumlah Kehadiran (H + HT) — untuk penghitungan TPP</div>' +
+    '</div>';
+  el.style.display = 'block';
 }
 
 async function cetakPDF(){
@@ -422,4 +445,3 @@ function muatRiwayatIzin(){
     ).join('');
   }).catch(() => {});
 }
-
