@@ -351,6 +351,7 @@ async function muatRekap(){
   if (!nip){ tampilkanPesan('rekap-error', 'Pilih guru terlebih dahulu.', 'error'); return; }
   tampilkanPesan('rekap-error', '', 'error');
   document.getElementById('btn-cetak-pdf').disabled = true;
+  document.getElementById('link-pdf-siap').style.display = 'none';
 
   try {
     const res = await callApi('getRekapBulanan', { nip, bulan, tahun });
@@ -399,6 +400,8 @@ async function cetakPDF(){
   const bulan = document.getElementById('rekap-bulan').value;
   const tahun = document.getElementById('rekap-tahun').value;
   const btn = document.getElementById('btn-cetak-pdf');
+  const linkSiap = document.getElementById('link-pdf-siap');
+  linkSiap.style.display = 'none';
   btn.disabled = true; const teksAsli = btn.textContent;
   btn.innerHTML = '<span class="spinner"></span>Membuat PDF…';
 
@@ -406,8 +409,13 @@ async function cetakPDF(){
     const res = await callApi('generateRekapPDF', { nip, bulan, tahun });
     btn.disabled = false; btn.textContent = teksAsli;
     if (!res.success){ tampilkanPesan('rekap-error', res.message, 'error'); return; }
-    tampilkanPesan('rekap-success', 'PDF berhasil dibuat.', 'success');
-    window.open(res.url, '_blank');
+    // Tombol manual di sini SENGAJA dipakai (bukan window.open otomatis) karena
+    // window.open yang dipanggil setelah "await" seringkali diblokir browser
+    // (dianggap bukan lagi hasil klik langsung pengguna). Tombol asli yang
+    // benar-benar diklik pengguna tidak pernah kena blokir semacam ini.
+    linkSiap.href = res.url;
+    linkSiap.style.display = 'block';
+    tampilkanPesan('rekap-success', 'PDF berhasil dibuat. Ketuk tombol hijau di bawah untuk membukanya.', 'success');
   } catch (err){
     btn.disabled = false; btn.textContent = teksAsli;
     tampilkanPesan('rekap-error', 'Gagal membuat PDF: ' + err.message, 'error');
