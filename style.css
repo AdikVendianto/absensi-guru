@@ -96,6 +96,16 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .btn-pulang{ background: var(--navy); color:#fff; }
 .action-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; margin-top:18px; }
 
+.tombol-pdf-siap{
+  display:block; text-decoration:none; text-align:center;
+  font-family:'Inter'; font-weight:600; font-size:14.5px; color:#fff;
+  background: var(--emerald); border-radius: var(--radius-sm);
+  padding:13px 18px; margin-top:10px;
+  transition: transform .12s ease, opacity .12s ease;
+}
+.tombol-pdf-siap:hover{ opacity:.9; }
+.tombol-pdf-siap:active{ transform: scale(0.98); }
+
 .absen-slot{ display:flex; flex-direction:column; gap:8px; }
 .absen-slot button{ width:100%; }
 .absen-selesai{
