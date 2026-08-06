@@ -168,6 +168,19 @@ table.rekap td{ padding:7px 6px; border-bottom:1px solid var(--line); text-align
 table.rekap tr:nth-child(even) td{ background:#FAFBFD; }
 .table-scroll{ width:100%; overflow-x:auto; }
 
+.ringkasan-kehadiran{ margin-top:16px; }
+.ringkasan-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+.ringkasan-item{ border:1px solid var(--line); border-radius:var(--radius-sm); padding:9px 6px; text-align:center; background:#fff; }
+.ringkasan-item .n{ font-family:'IBM Plex Mono'; font-weight:600; font-size:17px; color:var(--navy); }
+.ringkasan-item .l{ font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+.ringkasan-catatan{ font-size:11.5px; color:var(--ink-soft); margin-top:8px; text-align:center; }
+.ringkasan-total{
+  margin-top:10px; padding:14px; border-radius:var(--radius-md);
+  background: var(--navy); color:#fff; text-align:center;
+}
+.ringkasan-total .n{ font-family:'IBM Plex Mono'; font-weight:700; font-size:26px; }
+.ringkasan-total .l{ font-size:11.5px; opacity:.85; text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
+
 .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .spinner{
   width:16px; height:16px; border-radius:50%;
