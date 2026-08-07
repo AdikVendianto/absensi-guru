@@ -207,3 +207,37 @@ table.rekap tr:nth-child(even) td{ background:#FAFBFD; }
   .action-row{ gap:8px; }
   .field-row{ grid-template-columns:1fr; }
 }
+
+/* ================= AREA CETAK (Preview & Cetak) =================
+   Konsep: konten cetak dibangun oleh renderAreaCetak() di app.js ke
+   dalam #area-cetak, yang selalu tersembunyi di layar biasa. Saat
+   window.print() dipanggil, aturan @media print di bawah membalik
+   itu: SEMUA elemen lain disembunyikan, hanya #area-cetak yang
+   ditampilkan. Dialog print bawaan browser (yang muncul otomatis
+   saat window.print()) sudah menyediakan preview + pengaturan kertas/
+   orientasi/margin — tidak perlu dibangun sendiri dari nol. */
+.area-cetak{ display:none; }
+
+@media print{
+  body *{ visibility:hidden; }
+  #area-cetak, #area-cetak *{ visibility:visible; }
+  #area-cetak{
+    display:block; position:absolute; left:0; top:0; width:100%;
+    font-family:'Inter', sans-serif; color:#000; background:#fff;
+  }
+  #area-cetak .cetak-judul{ font-size:15px; font-weight:700; text-align:center; margin-bottom:2px; }
+  #area-cetak .cetak-sekolah{ font-size:12px; text-align:center; margin-bottom:12px; color:#333; }
+  #area-cetak .cetak-info{ font-size:11.5px; margin-bottom:10px; line-height:1.6; }
+  #area-cetak .cetak-info b{ display:inline-block; width:70px; }
+  #area-cetak table{ width:100%; border-collapse:collapse; font-size:9.5px; margin-bottom:14px; }
+  #area-cetak th, #area-cetak td{ border:1px solid #666; padding:3px 4px; text-align:center; }
+  #area-cetak th{ background:#16233F !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-size:9px; text-transform:uppercase; }
+  #area-cetak tr:nth-child(even) td{ background:#F5F6FA !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #area-cetak .cetak-ringkasan{ font-size:10.5px; margin-bottom:16px; }
+  #area-cetak .cetak-ringkasan table{ width:auto; min-width:260px; }
+  #area-cetak .cetak-ringkasan td{ text-align:left; padding:2px 10px; border:none; }
+  #area-cetak .cetak-ringkasan .total-row td{ font-weight:700; border-top:1.5px solid #000; }
+  #area-cetak .cetak-ttd{ margin-top:30px; width:220px; margin-left:auto; text-align:center; font-size:11px; }
+  #area-cetak .cetak-ttd .nama{ margin-top:55px; font-weight:700; text-decoration:underline; }
+  @page{ size: A4 landscape; margin:12mm; }
+}
