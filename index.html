@@ -136,7 +136,8 @@
         <input id="rekap-tahun" type="number" min="2020" max="2100">
 
         <button class="btn-primary" onclick="muatRekap()">Tampilkan Rekap</button>
-        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-cetak-pdf" onclick="cetakPDF()" disabled>Cetak PDF Lampiran TPG</button>
+        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-preview-cetak" onclick="previewCetak()" disabled>🖨️ Preview &amp; Cetak</button>
+        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-cetak-pdf" onclick="cetakPDF()" disabled>Simpan PDF ke Drive</button>
         <a id="link-pdf-siap" class="tombol-pdf-siap" style="display:none;" target="_blank" rel="noopener">📄 Buka / Cetak PDF yang Sudah Dibuat</a>
 
         <div id="rekap-error" class="error-msg"></div>
@@ -147,12 +148,16 @@
         <div class="table-scroll">
           <table class="rekap" id="tabel-rekap" style="display:none;">
             <thead>
-              <tr><th>Tanggal</th><th>Hari</th><th>Masuk</th><th>Status</th><th>Pulang</th><th>Status</th><th>Ket.</th></tr>
+              <tr><th>Tanggal</th><th>Hari</th><th>Masuk</th><th>Status</th><th>Pulang</th><th>Status</th><th>Durasi</th><th>Ket.</th></tr>
             </thead>
             <tbody id="tabel-rekap-body"></tbody>
           </table>
         </div>
       </div>
+
+      <!-- Area khusus cetak: tersembunyi di layar biasa, HANYA muncul saat print
+           (lihat @media print di style.css). Isinya dibangun oleh renderAreaCetak() di app.js. -->
+      <div id="area-cetak" class="area-cetak"></div>
 
       <div id="tab-izin" class="card wide" style="display:none;">
         <h2 class="title">Input Izin Dinas / Cuti</h2>
