@@ -172,6 +172,10 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .tab-btn{ flex:1; background:#fff; border:1.5px solid var(--line); color:var(--ink-soft); padding:11px; border-radius:var(--radius-sm); font-size:13.5px; }
 .tab-btn.active{ background:var(--navy); border-color:var(--navy); color:#fff; }
 
+.orientasi-toggle{ display:flex; gap:6px; }
+.orientasi-btn{ flex:1; background:#fff; border:1.5px solid var(--line); color:var(--ink-soft); padding:10px; border-radius:var(--radius-sm); font-size:13px; }
+.orientasi-btn.active{ background:var(--navy); border-color:var(--navy); color:#fff; }
+
 table.rekap{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:14px; }
 table.rekap th{ background:var(--navy); color:#fff; padding:8px 6px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; }
 table.rekap td{ padding:7px 6px; border-bottom:1px solid var(--line); text-align:center; }
@@ -239,5 +243,4 @@ table.rekap tr:nth-child(even) td{ background:#FAFBFD; }
   #area-cetak .cetak-ringkasan .total-row td{ font-weight:700; border-top:1.5px solid #000; }
   #area-cetak .cetak-ttd{ margin-top:30px; width:220px; margin-left:auto; text-align:center; font-size:11px; }
   #area-cetak .cetak-ttd .nama{ margin-top:55px; font-weight:700; text-decoration:underline; }
-  @page{ size: A4 landscape; margin:12mm; }
 }
