@@ -351,6 +351,7 @@ async function muatRekap(){
   if (!nip){ tampilkanPesan('rekap-error', 'Pilih guru terlebih dahulu.', 'error'); return; }
   tampilkanPesan('rekap-error', '', 'error');
   document.getElementById('btn-cetak-pdf').disabled = true;
+  document.getElementById('btn-preview-cetak').disabled = true;
   document.getElementById('link-pdf-siap').style.display = 'none';
 
   try {
@@ -358,16 +359,19 @@ async function muatRekap(){
     const tbody = document.getElementById('tabel-rekap-body');
     tbody.innerHTML = res.rows.map(r => {
       if (r.statusHari === 'Libur'){
-        return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td><td colspan="5" style="color:var(--ink-soft);">Libur</td></tr>';
+        return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td><td colspan="6" style="color:var(--ink-soft);">Libur</td></tr>';
       }
       return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td>' +
         '<td>' + (r.jamMasuk || '-') + '</td><td>' + kodeBadge(r.statusMasuk) + '</td>' +
         '<td>' + (r.jamPulang || '-') + '</td><td>' + kodeBadge(r.statusPulang) + '</td>' +
+        '<td>' + (r.durasiKerja || '-') + '</td>' +
         '<td>' + (r.keterangan || (r.statusHari === 'A' ? 'Alpa' : (r.statusHari === 'DL' ? 'Dinas Luar' : (r.statusHari === 'C' ? 'Cuti' : '')))) + '</td></tr>';
     }).join('');
     document.getElementById('tabel-rekap').style.display = '';
     document.getElementById('btn-cetak-pdf').disabled = false;
+    document.getElementById('btn-preview-cetak').disabled = false;
     renderRingkasanKehadiran(res.ringkasan);
+    renderAreaCetak(res);
   } catch (err){
     tampilkanPesan('rekap-error', 'Gagal memuat rekap: ' + err.message, 'error');
   }
@@ -393,6 +397,61 @@ function renderRingkasanKehadiran(r){
       '<div class="l">Total Jumlah Kehadiran (H + HT) — untuk penghitungan TPP</div>' +
     '</div>';
   el.style.display = 'block';
+}
+
+// Membangun versi rapi dari rekap yang sama persis dengan data di layar,
+// disimpan ke #area-cetak yang tersembunyi (lihat @media print di style.css).
+// Tidak perlu panggilan API baru — datanya sudah ada di tangan (hasil muatRekap()).
+function renderAreaCetak(rekap){
+  const el = document.getElementById('area-cetak');
+  const baris = rekap.rows.map(r => {
+    if (r.statusHari === 'Libur'){
+      return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td><td colspan="6">Libur</td></tr>';
+    }
+    const ket = r.keterangan || (r.statusHari === 'A' ? 'Alpa' : (r.statusHari === 'DL' ? 'Dinas Luar' : (r.statusHari === 'C' ? 'Cuti' : '')));
+    return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td>' +
+      '<td>' + (r.jamMasuk || '-') + '</td><td>' + (r.statusMasuk || '-') + '</td>' +
+      '<td>' + (r.jamPulang || '-') + '</td><td>' + (r.statusPulang || '-') + '</td>' +
+      '<td>' + (r.durasiKerja || '-') + '</td><td>' + (ket || '-') + '</td></tr>';
+  }).join('');
+
+  const ring = rekap.ringkasan;
+  const ringkasanBaris = [
+    ['Hadir Tepat Waktu (H)', ring.H], ['Hadir Terlambat (HT)', ring.HT],
+    ['Pulang Cepat (PA)', ring.PA], ['Alpa (A)', ring.A],
+    ['Dinas Luar (DL)', ring.DL], ['Cuti (C)', ring.C],
+    ['Jumlah Hari Kerja', ring.hariKerja]
+  ].map(b => '<tr><td>' + b[0] + '</td><td>' + b[1] + '</td></tr>').join('');
+
+  el.innerHTML =
+    '<div class="cetak-judul">LAMPIRAN DAFTAR HADIR GURU (DASAR PENCAIRAN TPG)</div>' +
+    '<div class="cetak-sekolah">' + (rekap.namaSekolah || '') + '</div>' +
+    '<div class="cetak-info">' +
+      '<div><b>Nama Guru</b>: ' + rekap.nama + '</div>' +
+      '<div><b>NIP</b>: ' + rekap.nip + '</div>' +
+      '<div><b>Bulan</b>: ' + BULAN_NAMA[rekap.bulan - 1] + ' ' + rekap.tahun + '</div>' +
+    '</div>' +
+    '<table><thead><tr><th>Tanggal</th><th>Hari</th><th>Masuk</th><th>Status</th><th>Pulang</th><th>Status</th><th>Durasi</th><th>Keterangan</th></tr></thead>' +
+    '<tbody>' + baris + '</tbody></table>' +
+    '<div class="cetak-ringkasan">' +
+      '<b>Ringkasan Kehadiran Bulan Ini</b>' +
+      '<table>' + ringkasanBaris +
+        '<tr class="total-row"><td>TOTAL JUMLAH KEHADIRAN (H + HT)</td><td>' + ring.jumlahKehadiran + '</td></tr>' +
+      '</table>' +
+    '</div>' +
+    '<div class="cetak-ttd">' +
+      '<div>Mengetahui,</div>' +
+      '<div class="nama">' + (rekap.namaKepsek || 'Kepala Sekolah') + '</div>' +
+      '<div>NIP. ' + (rekap.nipKepsek || '-') + '</div>' +
+    '</div>';
+}
+
+// Memicu dialog print bawaan browser — ini SEKALIGUS berfungsi sebagai
+// preview (browser selalu menampilkan preview sebelum benar-benar cetak)
+// dan menu pengaturan cetak (ukuran kertas, orientasi, margin, skala),
+// tanpa perlu membangun UI kustom untuk itu.
+function previewCetak(){
+  window.print();
 }
 
 async function cetakPDF(){
