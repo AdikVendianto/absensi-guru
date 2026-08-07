@@ -11,6 +11,7 @@ let fotoBase64 = null;
 let statusHariIni = { masuk: null, pulang: null };
 let cameraStream = null;
 let watchId = null;
+let orientasiCetak = 'portrait'; // default sesuai permintaan: portrait, bisa diganti user ke landscape
 const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 // ================= PEMANGGIL API (CORS-SAFE) =================
@@ -67,6 +68,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+  terapkanOrientasiCetak(orientasiCetak);
 });
 
 // ================= LOGIN =================
@@ -446,11 +448,31 @@ function renderAreaCetak(rekap){
     '</div>';
 }
 
+function setOrientasi(o){
+  orientasiCetak = o;
+  document.getElementById('btn-orientasi-portrait').classList.toggle('active', o === 'portrait');
+  document.getElementById('btn-orientasi-landscape').classList.toggle('active', o === 'landscape');
+}
+
+// @page tidak bisa diubah lewat class/inline style seperti elemen biasa,
+// jadi kita suntik/timpa tag <style> berisi @page sesuai pilihan pengguna
+// tepat sebelum window.print() dipanggil.
+function terapkanOrientasiCetak(orientasi){
+  let styleEl = document.getElementById('style-orientasi-cetak');
+  if (!styleEl){
+    styleEl = document.createElement('style');
+    styleEl.id = 'style-orientasi-cetak';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = '@media print { @page{ size: A4 ' + orientasi + '; margin:12mm; } }';
+}
+
 // Memicu dialog print bawaan browser — ini SEKALIGUS berfungsi sebagai
 // preview (browser selalu menampilkan preview sebelum benar-benar cetak)
 // dan menu pengaturan cetak (ukuran kertas, orientasi, margin, skala),
 // tanpa perlu membangun UI kustom untuk itu.
 function previewCetak(){
+  terapkanOrientasiCetak(orientasiCetak);
   window.print();
 }
 
@@ -465,7 +487,7 @@ async function cetakPDF(){
   btn.innerHTML = '<span class="spinner"></span>Membuat PDF…';
 
   try {
-    const res = await callApi('generateRekapPDF', { nip, bulan, tahun });
+    const res = await callApi('generateRekapPDF', { nip, bulan, tahun, orientasi: orientasiCetak });
     btn.disabled = false; btn.textContent = teksAsli;
     if (!res.success){ tampilkanPesan('rekap-error', res.message, 'error'); return; }
     // Tombol manual di sini SENGAJA dipakai (bukan window.open otomatis) karena
