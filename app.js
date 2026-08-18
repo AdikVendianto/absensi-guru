@@ -334,11 +334,18 @@ function initAdmin(){
   muatRiwayatIzin();
 }
 
+let jadwalKerjaSudahDimuat = false;
+
 function gantiTabAdmin(tab){
   document.getElementById('tab-btn-rekap').classList.toggle('active', tab === 'rekap');
   document.getElementById('tab-btn-izin').classList.toggle('active', tab === 'izin');
+  document.getElementById('tab-btn-jamkerja').classList.toggle('active', tab === 'jamkerja');
   document.getElementById('tab-rekap').style.display = tab === 'rekap' ? '' : 'none';
   document.getElementById('tab-izin').style.display = tab === 'izin' ? '' : 'none';
+  document.getElementById('tab-jamkerja').style.display = tab === 'jamkerja' ? '' : 'none';
+  if (tab === 'jamkerja' && !jadwalKerjaSudahDimuat){
+    muatJadwalKerja();
+  }
 }
 
 function kodeBadge(kode){
@@ -533,4 +540,51 @@ function muatRiwayatIzin(){
       '<tr><td>' + iz.mulai + '</td><td>' + iz.selesai + '</td><td>' + iz.nip + '</td><td>' + kodeBadge(iz.jenis) + '</td><td>' + (iz.keterangan || '-') + '</td></tr>'
     ).join('');
   }).catch(() => {});
+}
+
+// ================= JAM KERJA PER HARI (ADMIN) =================
+function muatJadwalKerja(){
+  const wrap = document.getElementById('jadwal-kerja-list');
+  wrap.innerHTML = '<p style="color:var(--ink-soft); font-size:13px;">Memuat jadwal…</p>';
+  callApi('getJadwalKerja').then(list => {
+    jadwalKerjaSudahDimuat = true;
+    wrap.innerHTML = list.map(j =>
+      '<div class="jadwal-row" data-hari="' + j.hari + '">' +
+        '<div class="hari-label">' + j.hari + '</div>' +
+        '<div>' +
+          '<div class="jadwal-field-label">Masuk</div>' +
+          '<input type="time" class="jadwal-masuk" value="' + j.jamMasuk + '">' +
+        '</div>' +
+        '<div>' +
+          '<div class="jadwal-field-label">Pulang</div>' +
+          '<input type="time" class="jadwal-pulang" value="' + j.jamPulang + '">' +
+        '</div>' +
+      '</div>'
+    ).join('');
+  }).catch(err => {
+    wrap.innerHTML = '';
+    tampilkanPesan('jadwal-error', 'Gagal memuat jadwal: ' + err.message, 'error');
+  });
+}
+
+async function simpanJadwalKerja(){
+  const baris = document.querySelectorAll('#jadwal-kerja-list .jadwal-row');
+  if (baris.length === 0){
+    tampilkanPesan('jadwal-error', 'Jadwal belum dimuat, coba buka tab ini ulang.', 'error');
+    return;
+  }
+  const jadwal = Array.from(baris).map(row => ({
+    hari: row.getAttribute('data-hari'),
+    jamMasuk: row.querySelector('.jadwal-masuk').value || '07:00',
+    jamPulang: row.querySelector('.jadwal-pulang').value || '15:30'
+  }));
+
+  tampilkanPesan('jadwal-error', '', 'error');
+  try {
+    const res = await callApi('simpanJadwalKerja', { jadwal });
+    if (!res.success){ tampilkanPesan('jadwal-error', res.message, 'error'); return; }
+    tampilkanPesan('jadwal-success', res.message, 'success');
+  } catch (err){
+    tampilkanPesan('jadwal-error', 'Gagal menyimpan: ' + err.message, 'error');
+  }
 }
