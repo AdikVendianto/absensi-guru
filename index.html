@@ -116,6 +116,7 @@
       <div class="tabs">
         <button class="tab-btn active" id="tab-btn-rekap" onclick="gantiTabAdmin('rekap')">Rekap Bulanan</button>
         <button class="tab-btn" id="tab-btn-izin" onclick="gantiTabAdmin('izin')">Izin Dinas / Cuti</button>
+        <button class="tab-btn" id="tab-btn-jamkerja" onclick="gantiTabAdmin('jamkerja')">Jam Kerja</button>
       </div>
 
       <div id="tab-rekap" class="card wide">
@@ -203,6 +204,17 @@
             <tbody id="tabel-izin-body"></tbody>
           </table>
         </div>
+      </div>
+
+      <div id="tab-jamkerja" class="card wide" style="display:none;">
+        <h2 class="title">Jam Kerja per Hari</h2>
+        <p class="subtitle">Atur jam masuk &amp; pulang untuk tiap hari secara terpisah — misalnya Jumat pulang lebih awal dari hari lain.</p>
+
+        <div id="jadwal-kerja-list"></div>
+
+        <button class="btn-primary" onclick="simpanJadwalKerja()">Simpan Perubahan</button>
+        <div id="jadwal-error" class="error-msg"></div>
+        <div id="jadwal-success" class="success-msg"></div>
       </div>
     </div>
 
