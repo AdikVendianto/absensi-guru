@@ -176,6 +176,18 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .orientasi-btn{ flex:1; background:#fff; border:1.5px solid var(--line); color:var(--ink-soft); padding:10px; border-radius:var(--radius-sm); font-size:13px; }
 .orientasi-btn.active{ background:var(--navy); border-color:var(--navy); color:#fff; }
 
+.jadwal-row{
+  display:grid; grid-template-columns: 84px 1fr 1fr; gap:10px; align-items:center;
+  padding:10px 0; border-bottom:1px solid var(--line);
+}
+.jadwal-row:last-child{ border-bottom:none; }
+.jadwal-row .hari-label{ font-weight:600; font-size:13.5px; color:var(--navy); }
+.jadwal-row input[type="time"]{ padding:9px 10px; font-size:13.5px; }
+.jadwal-field-label{ font-size:10px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px; }
+@media (max-width:480px){
+  .jadwal-row{ grid-template-columns: 60px 1fr 1fr; gap:6px; }
+}
+
 table.rekap{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:14px; }
 table.rekap th{ background:var(--navy); color:#fff; padding:8px 6px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; }
 table.rekap td{ padding:7px 6px; border-bottom:1px solid var(--line); text-align:center; }
