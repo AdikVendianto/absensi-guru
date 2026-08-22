@@ -119,6 +119,15 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .absen-selesai .code-badge{ font-size:11px; padding:1px 7px; }
 
 .error-msg{ background: var(--rose-soft); color: var(--rose); padding:10px 13px; border-radius: var(--radius-sm); font-size:13px; margin-top:14px; display:none; }
+.libur-notice{
+  width:100%; max-width:720px; background: var(--amber-soft); color:#8a6410;
+  padding:13px 16px; border-radius: var(--radius-md); font-size:13.5px;
+  text-align:center; margin-bottom:16px; line-height:1.5;
+}
+.badge-libur{
+  font-size:9.5px; font-weight:600; color:var(--amber); background:var(--amber-soft);
+  padding:1px 7px; border-radius:8px; margin-left:6px; vertical-align:middle;
+}
 .success-msg{ background: var(--emerald-soft); color: var(--emerald); padding:10px 13px; border-radius: var(--radius-sm); font-size:13px; margin-top:14px; display:none; }
 
 .topbar{ display:flex; justify-content:space-between; align-items:center; width:100%; max-width:720px; margin-bottom:16px; }
@@ -187,6 +196,29 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 @media (max-width:480px){
   .jadwal-row{ grid-template-columns: 60px 1fr 1fr; gap:6px; }
 }
+
+.kolom-cetak-panel{
+  margin-top:16px; padding:14px 16px; background: var(--paper);
+  border:1px solid var(--line); border-radius: var(--radius-md);
+}
+.kolom-cetak-header{ font-size:12.5px; font-weight:600; color:var(--navy); margin-bottom:8px; }
+.toggle-row{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px;
+}
+.toggle-row:last-child{ border-bottom:none; }
+.toggle-switch{ position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
+.toggle-switch input{ opacity:0; width:0; height:0; position:absolute; }
+.toggle-slider{
+  position:absolute; cursor:pointer; inset:0; background-color: var(--line);
+  transition:.2s; border-radius:24px;
+}
+.toggle-slider:before{
+  position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px;
+  background-color:#fff; transition:.2s; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider{ background-color: var(--emerald); }
+.toggle-switch input:checked + .toggle-slider:before{ transform: translateX(18px); }
 
 table.rekap{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:14px; }
 table.rekap th{ background:var(--navy); color:#fff; padding:8px 6px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; }
