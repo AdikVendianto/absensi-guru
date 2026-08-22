@@ -14,6 +14,20 @@ let watchId = null;
 let orientasiCetak = 'portrait'; // default sesuai permintaan: portrait, bisa diganti user ke landscape
 const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
+// Kolom cetak: Tanggal SENGAJA tidak di sini karena dikunci selalu tampil.
+// key harus sama persis dengan field yang dipakai backend (getPengaturanKolomCetak/simpanPengaturanKolomCetak).
+const KOLOM_CETAK_DAFTAR = [
+  { key: 'tampilHari', label: 'Hari' },
+  { key: 'tampilJamMasuk', label: 'Jam Masuk' },
+  { key: 'tampilStatusMasuk', label: 'Status Masuk' },
+  { key: 'tampilJamPulang', label: 'Jam Pulang' },
+  { key: 'tampilStatusPulang', label: 'Status Pulang' },
+  { key: 'tampilDurasi', label: 'Durasi Kerja' },
+  { key: 'tampilKeterangan', label: 'Keterangan' }
+];
+let kolomCetak = { tampilHari:true, tampilJamMasuk:true, tampilStatusMasuk:true, tampilJamPulang:true, tampilStatusPulang:true, tampilDurasi:true, tampilKeterangan:true };
+let rekapTerakhir = null; // menyimpan hasil rekap terakhir supaya toggle kolom bisa render ulang tanpa panggil API lagi
+
 // ================= PEMANGGIL API (CORS-SAFE) =================
 // PENTING: Content-Type harus text/plain agar browser TIDAK mengirim
 // preflight OPTIONS (Apps Script web app tidak bisa merespons preflight).
@@ -104,7 +118,11 @@ function initAbsen(){
   updateJamSekarang();
   setInterval(updateJamSekarang, 1000);
 
-  callApi('getPengaturanPublik').then(p => { pengaturan = p; }).catch(() => {});
+  callApi('getPengaturanPublik').then(p => {
+    pengaturan = p;
+    document.getElementById('absen-libur-notice').style.display = p.libur ? 'block' : 'none';
+    updateTombolState();
+  }).catch(() => {});
   callApi('getStatusHariIni', { nip: currentUser.nip }).then(renderStatusHariIni).catch(() => {});
 
   startGeolocation();
@@ -276,11 +294,12 @@ function ambilUlang(){
 function updateTombolState(){
   const dalamRadius = jarakSekarang !== null && pengaturan && jarakSekarang <= pengaturan.radius;
   const adaFoto = !!fotoBase64;
+  const hariLibur = pengaturan && pengaturan.libur;
   const btnMasuk = document.getElementById('btn-masuk');
   const btnPulang = document.getElementById('btn-pulang');
 
-  btnMasuk.disabled = !(dalamRadius && adaFoto) || !!statusHariIni.masuk;
-  btnPulang.disabled = !(dalamRadius && adaFoto) || !!statusHariIni.pulang || !statusHariIni.masuk;
+  btnMasuk.disabled = hariLibur || !(dalamRadius && adaFoto) || !!statusHariIni.masuk;
+  btnPulang.disabled = hariLibur || !(dalamRadius && adaFoto) || !!statusHariIni.pulang || !statusHariIni.masuk;
 }
 
 async function kirimAbsen(jenis){
@@ -332,6 +351,7 @@ function initAdmin(){
   }).catch(() => {});
 
   muatRiwayatIzin();
+  muatPengaturanKolomCetak();
 }
 
 let jadwalKerjaSudahDimuat = false;
@@ -353,6 +373,80 @@ function kodeBadge(kode){
   return '<span class="code-badge code-' + kode + '">' + kode + '</span>';
 }
 
+// ================= PENGATURAN KOLOM CETAK =================
+function muatPengaturanKolomCetak(){
+  callApi('getPengaturanKolomCetak').then(res => {
+    kolomCetak = res;
+    renderToggleKolomUI();
+  }).catch(() => {
+    renderToggleKolomUI(); // tetap tampilkan toggle dengan default (semua on) kalau gagal memuat
+  });
+}
+
+function renderToggleKolomUI(){
+  const wrap = document.getElementById('kolom-toggle-list');
+  wrap.innerHTML = KOLOM_CETAK_DAFTAR.map(k =>
+    '<div class="toggle-row">' +
+      '<span>' + k.label + '</span>' +
+      '<label class="toggle-switch">' +
+        '<input type="checkbox" data-kolom="' + k.key + '" ' + (kolomCetak[k.key] ? 'checked' : '') + '>' +
+        '<span class="toggle-slider"></span>' +
+      '</label>' +
+    '</div>'
+  ).join('');
+
+  wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      kolomCetak[cb.getAttribute('data-kolom')] = cb.checked;
+      // Render ulang langsung pakai data yang sudah ada (tanpa panggil API lagi)
+      // supaya tabel di layar & area cetak selalu WYSIWYG dengan toggle terbaru.
+      if (rekapTerakhir){
+        renderTabelRekap(rekapTerakhir);
+        renderAreaCetak(rekapTerakhir);
+      }
+    });
+  });
+}
+
+async function simpanPengaturanKolomCetak(){
+  tampilkanPesan('kolom-cetak-error', '', 'error');
+  try {
+    const res = await callApi('simpanPengaturanKolomCetak', kolomCetak);
+    if (!res.success){ tampilkanPesan('kolom-cetak-error', res.message, 'error'); return; }
+    tampilkanPesan('kolom-cetak-success', res.message, 'success');
+  } catch (err){
+    tampilkanPesan('kolom-cetak-error', 'Gagal menyimpan: ' + err.message, 'error');
+  }
+}
+
+/** Daftar kolom yang tampil sekarang, urutan tetap, Tanggal selalu di posisi pertama & tidak bisa dimatikan. */
+function kolomAktif(){
+  const daftar = [{ key: 'tanggal', label: 'Tanggal' }];
+  if (kolomCetak.tampilHari) daftar.push({ key: 'hari', label: 'Hari' });
+  if (kolomCetak.tampilJamMasuk) daftar.push({ key: 'jamMasuk', label: 'Masuk' });
+  if (kolomCetak.tampilStatusMasuk) daftar.push({ key: 'statusMasuk', label: 'Status' });
+  if (kolomCetak.tampilJamPulang) daftar.push({ key: 'jamPulang', label: 'Pulang' });
+  if (kolomCetak.tampilStatusPulang) daftar.push({ key: 'statusPulang', label: 'Status' });
+  if (kolomCetak.tampilDurasi) daftar.push({ key: 'durasi', label: 'Durasi' });
+  if (kolomCetak.tampilKeterangan) daftar.push({ key: 'keterangan', label: 'Keterangan' });
+  return daftar;
+}
+
+function nilaiSelKolom(r, key, untukCetak){
+  const ket = r.keterangan || (r.statusHari === 'A' ? 'Alpa' : (r.statusHari === 'DL' ? 'Dinas Luar' : (r.statusHari === 'C' ? 'Cuti' : '')));
+  switch (key){
+    case 'tanggal': return r.tanggal;
+    case 'hari': return r.hari;
+    case 'jamMasuk': return r.jamMasuk || '-';
+    case 'statusMasuk': return untukCetak ? (r.statusMasuk || '-') : kodeBadge(r.statusMasuk);
+    case 'jamPulang': return r.jamPulang || '-';
+    case 'statusPulang': return untukCetak ? (r.statusPulang || '-') : kodeBadge(r.statusPulang);
+    case 'durasi': return r.durasiKerja || '-';
+    case 'keterangan': return ket || '-';
+    default: return '-';
+  }
+}
+
 async function muatRekap(){
   const nip = document.getElementById('rekap-nip').value;
   const bulan = document.getElementById('rekap-bulan').value;
@@ -365,17 +459,8 @@ async function muatRekap(){
 
   try {
     const res = await callApi('getRekapBulanan', { nip, bulan, tahun });
-    const tbody = document.getElementById('tabel-rekap-body');
-    tbody.innerHTML = res.rows.map(r => {
-      if (r.statusHari === 'Libur'){
-        return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td><td colspan="6" style="color:var(--ink-soft);">Libur</td></tr>';
-      }
-      return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td>' +
-        '<td>' + (r.jamMasuk || '-') + '</td><td>' + kodeBadge(r.statusMasuk) + '</td>' +
-        '<td>' + (r.jamPulang || '-') + '</td><td>' + kodeBadge(r.statusPulang) + '</td>' +
-        '<td>' + (r.durasiKerja || '-') + '</td>' +
-        '<td>' + (r.keterangan || (r.statusHari === 'A' ? 'Alpa' : (r.statusHari === 'DL' ? 'Dinas Luar' : (r.statusHari === 'C' ? 'Cuti' : '')))) + '</td></tr>';
-    }).join('');
+    rekapTerakhir = res;
+    renderTabelRekap(res);
     document.getElementById('tabel-rekap').style.display = '';
     document.getElementById('btn-cetak-pdf').disabled = false;
     document.getElementById('btn-preview-cetak').disabled = false;
@@ -384,6 +469,23 @@ async function muatRekap(){
   } catch (err){
     tampilkanPesan('rekap-error', 'Gagal memuat rekap: ' + err.message, 'error');
   }
+}
+
+// Tabel di layar admin — kolomnya mengikuti toggle "Kolom Cetak" (WYSIWYG
+// dengan Preview & Cetak). Dipanggil ulang setiap toggle berubah, tanpa
+// perlu memanggil API lagi (pakai data dari rekapTerakhir).
+function renderTabelRekap(rekap){
+  const kolom = kolomAktif();
+  document.getElementById('tabel-rekap-head').innerHTML =
+    '<tr>' + kolom.map(k => '<th>' + k.label + '</th>').join('') + '</tr>';
+
+  const tbody = document.getElementById('tabel-rekap-body');
+  tbody.innerHTML = rekap.rows.map(r => {
+    if (r.statusHari === 'Libur'){
+      return '<tr><td>' + r.tanggal + '</td><td colspan="' + (kolom.length - 1) + '" style="color:var(--ink-soft);">Libur</td></tr>';
+    }
+    return '<tr>' + kolom.map(k => '<td>' + nilaiSelKolom(r, k.key, false) + '</td>').join('') + '</tr>';
+  }).join('');
 }
 
 function renderRingkasanKehadiran(r){
@@ -411,17 +513,16 @@ function renderRingkasanKehadiran(r){
 // Membangun versi rapi dari rekap yang sama persis dengan data di layar,
 // disimpan ke #area-cetak yang tersembunyi (lihat @media print di style.css).
 // Tidak perlu panggilan API baru — datanya sudah ada di tangan (hasil muatRekap()).
+// Kolomnya mengikuti toggle "Kolom Cetak" (sama seperti tabel di layar).
 function renderAreaCetak(rekap){
   const el = document.getElementById('area-cetak');
+  const kolom = kolomAktif();
+  const headerCetak = '<tr>' + kolom.map(k => '<th>' + k.label + '</th>').join('') + '</tr>';
   const baris = rekap.rows.map(r => {
     if (r.statusHari === 'Libur'){
-      return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td><td colspan="6">Libur</td></tr>';
+      return '<tr><td>' + r.tanggal + '</td><td colspan="' + (kolom.length - 1) + '">Libur</td></tr>';
     }
-    const ket = r.keterangan || (r.statusHari === 'A' ? 'Alpa' : (r.statusHari === 'DL' ? 'Dinas Luar' : (r.statusHari === 'C' ? 'Cuti' : '')));
-    return '<tr><td>' + r.tanggal + '</td><td>' + r.hari + '</td>' +
-      '<td>' + (r.jamMasuk || '-') + '</td><td>' + (r.statusMasuk || '-') + '</td>' +
-      '<td>' + (r.jamPulang || '-') + '</td><td>' + (r.statusPulang || '-') + '</td>' +
-      '<td>' + (r.durasiKerja || '-') + '</td><td>' + (ket || '-') + '</td></tr>';
+    return '<tr>' + kolom.map(k => '<td>' + nilaiSelKolom(r, k.key, true) + '</td>').join('') + '</tr>';
   }).join('');
 
   const ring = rekap.ringkasan;
@@ -440,7 +541,7 @@ function renderAreaCetak(rekap){
       '<div><b>NIP</b>: ' + rekap.nip + '</div>' +
       '<div><b>Bulan</b>: ' + BULAN_NAMA[rekap.bulan - 1] + ' ' + rekap.tahun + '</div>' +
     '</div>' +
-    '<table><thead><tr><th>Tanggal</th><th>Hari</th><th>Masuk</th><th>Status</th><th>Pulang</th><th>Status</th><th>Durasi</th><th>Keterangan</th></tr></thead>' +
+    '<table><thead>' + headerCetak + '</thead>' +
     '<tbody>' + baris + '</tbody></table>' +
     '<div class="cetak-ringkasan">' +
       '<b>Ringkasan Kehadiran Bulan Ini</b>' +
@@ -550,7 +651,7 @@ function muatJadwalKerja(){
     jadwalKerjaSudahDimuat = true;
     wrap.innerHTML = list.map(j =>
       '<div class="jadwal-row" data-hari="' + j.hari + '">' +
-        '<div class="hari-label">' + j.hari + '</div>' +
+        '<div class="hari-label">' + j.hari + '<span class="badge-libur" style="display:' + (j.libur ? 'inline' : 'none') + ';">Libur</span></div>' +
         '<div>' +
           '<div class="jadwal-field-label">Masuk</div>' +
           '<input type="time" class="jadwal-masuk" value="' + j.jamMasuk + '">' +
@@ -561,6 +662,19 @@ function muatJadwalKerja(){
         '</div>' +
       '</div>'
     ).join('');
+
+    // Badge "Libur" ikut update live begitu admin mengosongkan/mengisi kedua jam,
+    // supaya jelas terlihat sebelum sempat klik Simpan.
+    wrap.querySelectorAll('.jadwal-row').forEach(row => {
+      const masuk = row.querySelector('.jadwal-masuk');
+      const pulang = row.querySelector('.jadwal-pulang');
+      const badge = row.querySelector('.badge-libur');
+      const perbaruiBadge = () => {
+        badge.style.display = (!masuk.value && !pulang.value) ? 'inline' : 'none';
+      };
+      masuk.addEventListener('input', perbaruiBadge);
+      pulang.addEventListener('input', perbaruiBadge);
+    });
   }).catch(err => {
     wrap.innerHTML = '';
     tampilkanPesan('jadwal-error', 'Gagal memuat jadwal: ' + err.message, 'error');
@@ -575,8 +689,10 @@ async function simpanJadwalKerja(){
   }
   const jadwal = Array.from(baris).map(row => ({
     hari: row.getAttribute('data-hari'),
-    jamMasuk: row.querySelector('.jadwal-masuk').value || '07:00',
-    jamPulang: row.querySelector('.jadwal-pulang').value || '15:30'
+    // SENGAJA tidak diberi fallback di sini — kosong harus tetap terkirim
+    // kosong supaya backend bisa menandai hari itu Libur.
+    jamMasuk: row.querySelector('.jadwal-masuk').value || '',
+    jamPulang: row.querySelector('.jadwal-pulang').value || ''
   }));
 
   tampilkanPesan('jadwal-error', '', 'error');
