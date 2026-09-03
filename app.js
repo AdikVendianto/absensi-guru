@@ -7,6 +7,8 @@ let currentUser = null;
 let pengaturan = null;
 let posisiSekarang = null;
 let jarakSekarang = null;
+let radiusAktif = null;      // radius titik lokasi terdekat saat ini
+let namaTitikTerdekat = '';  // nama titik lokasi terdekat saat ini
 let fotoBase64 = null;
 let statusHariIni = { masuk: null, pulang: null };
 let cameraStream = null;
@@ -176,25 +178,42 @@ function startGeolocation(){
 
 function updateGauge(){
   if (!pengaturan || !posisiSekarang) return;
-  jarakSekarang = Math.round(haversineMeters(posisiSekarang.lat, posisiSekarang.lng, pengaturan.lat, pengaturan.lng));
+  const titikList = pengaturan.titikLokasi || [];
+  if (titikList.length === 0){
+    document.getElementById('gauge-status').textContent = 'Belum ada titik lokasi diatur admin';
+    document.getElementById('gauge-status').className = 'gauge-status bad';
+    return;
+  }
+
+  // Cari titik terdekat dari semua titik yang admin isi (titik kosong sudah
+  // tidak dikirim backend sama sekali, jadi tidak perlu dicek di sini lagi).
+  let titikTerdekat = titikList[0];
+  let jarakMin = haversineMeters(posisiSekarang.lat, posisiSekarang.lng, titikList[0].lat, titikList[0].lng);
+  for (let i = 1; i < titikList.length; i++) {
+    const j = haversineMeters(posisiSekarang.lat, posisiSekarang.lng, titikList[i].lat, titikList[i].lng);
+    if (j < jarakMin) { jarakMin = j; titikTerdekat = titikList[i]; }
+  }
+  jarakSekarang = Math.round(jarakMin);
+  radiusAktif = titikTerdekat.radius;
+  namaTitikTerdekat = titikTerdekat.nama;
   setText('gauge-jarak', jarakSekarang);
 
   const circumference = 113.1;
-  const maxDisplay = Math.max(pengaturan.radius * 5, 100);
+  const maxDisplay = Math.max(radiusAktif * 5, 100);
   const fraction = Math.max(0, Math.min(1, 1 - (jarakSekarang / maxDisplay)));
   const offset = circumference * (1 - fraction);
   const fillEl = document.getElementById('gauge-fill');
   fillEl.style.strokeDashoffset = offset;
 
   const statusEl = document.getElementById('gauge-status');
-  if (jarakSekarang <= pengaturan.radius){
+  if (jarakSekarang <= radiusAktif){
     fillEl.style.stroke = 'var(--emerald)';
     statusEl.className = 'gauge-status ok';
-    statusEl.textContent = 'Dalam radius (maks ' + pengaturan.radius + ' m)';
+    statusEl.textContent = 'Dalam radius ' + namaTitikTerdekat + ' (maks ' + radiusAktif + ' m)';
   } else {
     fillEl.style.stroke = 'var(--rose)';
     statusEl.className = 'gauge-status bad';
-    statusEl.textContent = 'Di luar radius, absen akan ditolak';
+    statusEl.textContent = 'Di luar radius, absen akan ditolak (terdekat: ' + namaTitikTerdekat + ')';
   }
   updateTombolState();
 }
@@ -292,7 +311,7 @@ function ambilUlang(){
 }
 
 function updateTombolState(){
-  const dalamRadius = jarakSekarang !== null && pengaturan && jarakSekarang <= pengaturan.radius;
+  const dalamRadius = jarakSekarang !== null && radiusAktif !== null && jarakSekarang <= radiusAktif;
   const adaFoto = !!fotoBase64;
   const hariLibur = pengaturan && pengaturan.libur;
   const btnMasuk = document.getElementById('btn-masuk');
@@ -325,7 +344,7 @@ async function kirimAbsen(jenis){
       updateTombolState();
       return;
     }
-    tampilkanPesan('absen-success', 'Absen ' + jenis + ' berhasil pukul ' + res.jam + ' — Status: ' + res.pesanStatus + ' (jarak ' + res.jarak + ' m).', 'success');
+    tampilkanPesan('absen-success', 'Absen ' + jenis + ' berhasil pukul ' + res.jam + ' — Status: ' + res.pesanStatus + ' (jarak ' + res.jarak + ' m dari ' + res.titikLokasi + ').', 'success');
     ambilUlang();
     callApi('getStatusHariIni', { nip: currentUser.nip }).then(renderStatusHariIni).catch(() => {});
   } catch (err){
@@ -355,16 +374,22 @@ function initAdmin(){
 }
 
 let jadwalKerjaSudahDimuat = false;
+let titikLokasiSudahDimuat = false;
 
 function gantiTabAdmin(tab){
   document.getElementById('tab-btn-rekap').classList.toggle('active', tab === 'rekap');
   document.getElementById('tab-btn-izin').classList.toggle('active', tab === 'izin');
   document.getElementById('tab-btn-jamkerja').classList.toggle('active', tab === 'jamkerja');
+  document.getElementById('tab-btn-lokasi').classList.toggle('active', tab === 'lokasi');
   document.getElementById('tab-rekap').style.display = tab === 'rekap' ? '' : 'none';
   document.getElementById('tab-izin').style.display = tab === 'izin' ? '' : 'none';
   document.getElementById('tab-jamkerja').style.display = tab === 'jamkerja' ? '' : 'none';
+  document.getElementById('tab-lokasi').style.display = tab === 'lokasi' ? '' : 'none';
   if (tab === 'jamkerja' && !jadwalKerjaSudahDimuat){
     muatJadwalKerja();
+  }
+  if (tab === 'lokasi' && !titikLokasiSudahDimuat){
+    muatTitikLokasi();
   }
 }
 
@@ -702,5 +727,96 @@ async function simpanJadwalKerja(){
     tampilkanPesan('jadwal-success', res.message, 'success');
   } catch (err){
     tampilkanPesan('jadwal-error', 'Gagal menyimpan: ' + err.message, 'error');
+  }
+}
+
+// ================= TITIK LOKASI ABSEN (ADMIN) =================
+function muatTitikLokasi(){
+  const wrap = document.getElementById('titik-lokasi-list');
+  wrap.innerHTML = '<p style="color:var(--ink-soft); font-size:13px;">Memuat titik lokasi…</p>';
+  callApi('getTitikLokasi').then(list => {
+    titikLokasiSudahDimuat = true;
+    wrap.innerHTML = list.map((t, idx) =>
+      '<div class="titik-card" data-index="' + idx + '">' +
+        '<input type="text" class="titik-nama-input" placeholder="Nama titik (mis. Gedung Utama)" value="' + (t.nama || '') + '">' +
+        '<div class="titik-field-row">' +
+          '<div>' +
+            '<div class="jadwal-field-label">Latitude</div>' +
+            '<input type="number" step="any" class="titik-lat" placeholder="-7.xxxxx" value="' + t.lat + '">' +
+          '</div>' +
+          '<div>' +
+            '<div class="jadwal-field-label">Longitude</div>' +
+            '<input type="number" step="any" class="titik-lng" placeholder="110.xxxxx" value="' + t.lng + '">' +
+          '</div>' +
+          '<div>' +
+            '<div class="jadwal-field-label">Radius (m)</div>' +
+            '<input type="number" class="titik-radius" placeholder="30" value="' + t.radius + '">' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="btn-ghost btn-block titik-gps-btn">📍 Ambil dari GPS Saya</button>' +
+        '<div class="titik-gps-status"></div>' +
+      '</div>'
+    ).join('');
+
+    wrap.querySelectorAll('.titik-card').forEach(card => {
+      card.querySelector('.titik-gps-btn').addEventListener('click', () => ambilGPSTitik(card));
+    });
+  }).catch(err => {
+    wrap.innerHTML = '';
+    tampilkanPesan('lokasi-error', 'Gagal memuat titik lokasi: ' + err.message, 'error');
+  });
+}
+
+// Mengisi Latitude/Longitude satu kartu titik memakai GPS HP admin saat itu
+// juga — admin tinggal berdiri di lokasinya, tidak perlu buka Google Maps.
+function ambilGPSTitik(card){
+  const btn = card.querySelector('.titik-gps-btn');
+  const status = card.querySelector('.titik-gps-status');
+  if (!navigator.geolocation){
+    status.textContent = 'GPS tidak didukung perangkat ini.';
+    status.style.display = 'block';
+    return;
+  }
+  const teksAsli = btn.textContent;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Mengambil lokasi…';
+  status.style.display = 'none';
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    card.querySelector('.titik-lat').value = pos.coords.latitude.toFixed(6);
+    card.querySelector('.titik-lng').value = pos.coords.longitude.toFixed(6);
+    btn.disabled = false; btn.textContent = teksAsli;
+    status.textContent = '✓ Lokasi berhasil diambil (akurasi ±' + Math.round(pos.coords.accuracy) + ' m). Jangan lupa klik Simpan.';
+    status.style.color = 'var(--emerald)';
+    status.style.display = 'block';
+  }, err => {
+    btn.disabled = false; btn.textContent = teksAsli;
+    status.textContent = 'Gagal ambil lokasi: izin GPS ditolak atau tidak tersedia.';
+    status.style.color = 'var(--rose)';
+    status.style.display = 'block';
+  }, { enableHighAccuracy:true, timeout:15000 });
+}
+
+async function simpanTitikLokasi(){
+  const kartu = document.querySelectorAll('#titik-lokasi-list .titik-card');
+  if (kartu.length === 0){
+    tampilkanPesan('lokasi-error', 'Data belum dimuat, coba buka tab ini ulang.', 'error');
+    return;
+  }
+  const titik = Array.from(kartu).map(card => ({
+    nama: card.querySelector('.titik-nama-input').value || '',
+    // SENGAJA tidak diberi fallback — kosong harus tetap terkirim kosong
+    // supaya titik itu dianggap belum aktif (dilewati saat validasi absen).
+    lat: card.querySelector('.titik-lat').value || '',
+    lng: card.querySelector('.titik-lng').value || '',
+    radius: card.querySelector('.titik-radius').value || ''
+  }));
+
+  tampilkanPesan('lokasi-error', '', 'error');
+  try {
+    const res = await callApi('simpanTitikLokasi', { titik });
+    if (!res.success){ tampilkanPesan('lokasi-error', res.message, 'error'); return; }
+    tampilkanPesan('lokasi-success', res.message, 'success');
+  } catch (err){
+    tampilkanPesan('lokasi-error', 'Gagal menyimpan: ' + err.message, 'error');
   }
 }
