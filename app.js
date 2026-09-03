@@ -750,7 +750,7 @@ function muatTitikLokasi(){
           '</div>' +
           '<div>' +
             '<div class="jadwal-field-label">Radius (m)</div>' +
-            '<input type="number" class="titik-radius" placeholder="30" value="' + t.radius + '">' +
+            '<input type="number" class="titik-radius" placeholder="30" value="' + (t.radius !== '' ? t.radius : 30) + '">' +
           '</div>' +
         '</div>' +
         '<button type="button" class="btn-ghost btn-block titik-gps-btn">📍 Ambil dari GPS Saya</button>' +
@@ -816,6 +816,7 @@ async function simpanTitikLokasi(){
     const res = await callApi('simpanTitikLokasi', { titik });
     if (!res.success){ tampilkanPesan('lokasi-error', res.message, 'error'); return; }
     tampilkanPesan('lokasi-success', res.message, 'success');
+    muatTitikLokasi(); // tampilkan ulang dari server agar terlihat kondisi yang BENAR-BENAR tersimpan
   } catch (err){
     tampilkanPesan('lokasi-error', 'Gagal menyimpan: ' + err.message, 'error');
   }
