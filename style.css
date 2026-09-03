@@ -197,6 +197,26 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
   .jadwal-row{ grid-template-columns: 60px 1fr 1fr; gap:6px; }
 }
 
+.titik-card{
+  border:1px solid var(--line); border-radius: var(--radius-md);
+  padding:14px; margin-bottom:12px; background:#fff;
+}
+.titik-card:last-child{ margin-bottom:0; }
+.titik-nama-input{
+  font-family:'Fraunces'; font-weight:600; font-size:14.5px; color:var(--navy);
+  border:none; border-bottom:1.5px solid var(--line); border-radius:0;
+  padding:4px 2px; margin-bottom:10px; width:100%;
+}
+.titik-nama-input:focus{ border-bottom-color: var(--navy); }
+.titik-field-row{ display:grid; grid-template-columns:1fr 1fr 80px; gap:8px; }
+.titik-field-row label{ margin:0 0 4px; }
+.titik-gps-btn{ margin-top:10px; font-size:12.5px; padding:9px; }
+.titik-gps-status{ font-size:11px; color:var(--ink-soft); margin-top:6px; text-align:center; display:none; }
+@media (max-width:480px){
+  .titik-field-row{ grid-template-columns:1fr 1fr; }
+  .titik-field-row > div:last-child{ grid-column:span 2; }
+}
+
 .kolom-cetak-panel{
   margin-top:16px; padding:14px 16px; background: var(--paper);
   border:1px solid var(--line); border-radius: var(--radius-md);
@@ -254,6 +274,8 @@ table.rekap tr:nth-child(even) td{ background:#FAFBFD; }
   .card{ padding:20px 16px; }
   .action-row{ gap:8px; }
   .field-row{ grid-template-columns:1fr; }
+  .tabs{ flex-wrap:wrap; }
+  .tab-btn{ font-size:11.5px; padding:9px 4px; min-width:calc(50% - 3px); }
 }
 
 /* ================= AREA CETAK (Preview & Cetak) =================
