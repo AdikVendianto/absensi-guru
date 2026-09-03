@@ -121,6 +121,7 @@
         <button class="tab-btn active" id="tab-btn-rekap" onclick="gantiTabAdmin('rekap')">Rekap Bulanan</button>
         <button class="tab-btn" id="tab-btn-izin" onclick="gantiTabAdmin('izin')">Izin Dinas / Cuti</button>
         <button class="tab-btn" id="tab-btn-jamkerja" onclick="gantiTabAdmin('jamkerja')">Jam Kerja</button>
+        <button class="tab-btn" id="tab-btn-lokasi" onclick="gantiTabAdmin('lokasi')">Titik Lokasi</button>
       </div>
 
       <div id="tab-rekap" class="card wide">
@@ -226,6 +227,18 @@
         <button class="btn-primary" onclick="simpanJadwalKerja()">Simpan Perubahan</button>
         <div id="jadwal-error" class="error-msg"></div>
         <div id="jadwal-success" class="success-msg"></div>
+      </div>
+
+      <div id="tab-lokasi" class="card wide" style="display:none;">
+        <h2 class="title">Titik Lokasi Absen</h2>
+        <p class="subtitle">Bisa lebih dari satu titik (misal beberapa gedung/kampus) — guru dianggap sah absen kalau berada dalam radius <b>salah satu</b> titik yang terisi.<br>
+        <b>Kosongkan Latitude &amp; Longitude</b> pada satu titik untuk menonaktifkannya (tidak dianggap error, cukup dilewati).</p>
+
+        <div id="titik-lokasi-list"></div>
+
+        <button class="btn-primary" onclick="simpanTitikLokasi()">Simpan Titik Lokasi</button>
+        <div id="lokasi-error" class="error-msg"></div>
+        <div id="lokasi-success" class="success-msg"></div>
       </div>
     </div>
 
