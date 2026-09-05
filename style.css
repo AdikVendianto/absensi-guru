@@ -210,6 +210,15 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .titik-nama-input:focus{ border-bottom-color: var(--navy); }
 .titik-field-row{ display:grid; grid-template-columns:1fr 1fr 80px; gap:8px; }
 .titik-field-row label{ margin:0 0 4px; }
+
+.guru-nip-label{ font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; }
+.guru-nip-label b{ color:var(--navy); }
+.guru-nama{
+  font-family:'Fraunces'; font-weight:600; font-size:14.5px; color:var(--navy);
+  border:none; border-bottom:1.5px solid var(--line); border-radius:0;
+  padding:4px 2px; margin-bottom:10px; width:100%;
+}
+.guru-nama:focus{ border-bottom-color: var(--navy); }
 .titik-gps-btn{ margin-top:10px; font-size:12.5px; padding:9px; }
 .titik-gps-status{ font-size:11px; color:var(--ink-soft); margin-top:6px; text-align:center; display:none; }
 @media (max-width:480px){
@@ -224,9 +233,15 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .kolom-cetak-header{ font-size:12.5px; font-weight:600; color:var(--navy); margin-bottom:8px; }
 .toggle-row{
   display:flex; justify-content:space-between; align-items:center;
-  padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px;
+  padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px; gap:10px;
 }
 .toggle-row:last-child{ border-bottom:none; }
+.toggle-row-kanan{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.lebar-kolom-input{
+  width:56px; padding:6px 4px; text-align:center; font-size:12.5px;
+  border:1.5px solid var(--line); border-radius:6px;
+}
+.lebar-kolom-label{ font-size:10px; color:var(--ink-soft); }
 .toggle-switch{ position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
 .toggle-switch input{ opacity:0; width:0; height:0; position:absolute; }
 .toggle-slider{
@@ -240,7 +255,7 @@ button:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
 .toggle-switch input:checked + .toggle-slider{ background-color: var(--emerald); }
 .toggle-switch input:checked + .toggle-slider:before{ transform: translateX(18px); }
 
-table.rekap{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:14px; }
+table.rekap{ width:100%; table-layout:fixed; border-collapse:collapse; font-size:12.5px; margin-top:14px; }
 table.rekap th{ background:var(--navy); color:#fff; padding:8px 6px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; }
 table.rekap td{ padding:7px 6px; border-bottom:1px solid var(--line); text-align:center; }
 table.rekap tr:nth-child(even) td{ background:#FAFBFD; }
@@ -296,7 +311,12 @@ table.rekap tr:nth-child(even) td{ background:#FAFBFD; }
     font-family:'Inter', sans-serif; color:#000; background:#fff;
   }
   #area-cetak .cetak-judul{ font-size:15px; font-weight:700; text-align:center; margin-bottom:2px; }
-  #area-cetak .cetak-sekolah{ font-size:12px; text-align:center; margin-bottom:12px; color:#333; }
+  #area-cetak .cetak-sekolah{ font-size:12px; font-weight:700; text-align:center; margin-bottom:12px; color:#333; }
+  #area-cetak .cetak-kop{ text-align:center; margin-bottom:6px; }
+  #area-cetak .kop-baris{ font-size:12px; font-weight:700; line-height:1.4; }
+  #area-cetak .kop-baris-akhir{ font-size:10.5px; font-weight:400; line-height:1.4; }
+  #area-cetak .cetak-kop-divider{ border:none; border-top:2px solid #000; margin:4px 0 14px; }
+  #area-cetak table.cetak-tabel-utama{ table-layout:fixed; }
   #area-cetak .cetak-info{ font-size:11.5px; margin-bottom:10px; line-height:1.6; }
   #area-cetak .cetak-info b{ display:inline-block; width:70px; }
   #area-cetak table{ width:100%; border-collapse:collapse; font-size:9.5px; margin-bottom:14px; }
