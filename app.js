@@ -16,18 +16,24 @@ let watchId = null;
 let orientasiCetak = 'portrait'; // default sesuai permintaan: portrait, bisa diganti user ke landscape
 const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
-// Kolom cetak: Tanggal SENGAJA tidak di sini karena dikunci selalu tampil.
+// Kolom cetak: Tanggal SENGAJA tidak ada tombol tampil/sembunyi (dikunci
+// selalu tampil), tapi lebarnya tetap bisa diatur — makanya ditangani
+// terpisah lewat KOLOM_TANGGAL_LEBAR di bawah.
 // key harus sama persis dengan field yang dipakai backend (getPengaturanKolomCetak/simpanPengaturanKolomCetak).
 const KOLOM_CETAK_DAFTAR = [
-  { key: 'tampilHari', label: 'Hari' },
-  { key: 'tampilJamMasuk', label: 'Jam Masuk' },
-  { key: 'tampilStatusMasuk', label: 'Status Masuk' },
-  { key: 'tampilJamPulang', label: 'Jam Pulang' },
-  { key: 'tampilStatusPulang', label: 'Status Pulang' },
-  { key: 'tampilDurasi', label: 'Durasi Kerja' },
-  { key: 'tampilKeterangan', label: 'Keterangan' }
+  { key: 'tampilHari', lebarKey: 'lebarHari', label: 'Hari' },
+  { key: 'tampilJamMasuk', lebarKey: 'lebarJamMasuk', label: 'Jam Masuk' },
+  { key: 'tampilStatusMasuk', lebarKey: 'lebarStatusMasuk', label: 'Status Masuk' },
+  { key: 'tampilJamPulang', lebarKey: 'lebarJamPulang', label: 'Jam Pulang' },
+  { key: 'tampilStatusPulang', lebarKey: 'lebarStatusPulang', label: 'Status Pulang' },
+  { key: 'tampilDurasi', lebarKey: 'lebarDurasi', label: 'Durasi Kerja' },
+  { key: 'tampilKeterangan', lebarKey: 'lebarKeterangan', label: 'Keterangan' }
 ];
-let kolomCetak = { tampilHari:true, tampilJamMasuk:true, tampilStatusMasuk:true, tampilJamPulang:true, tampilStatusPulang:true, tampilDurasi:true, tampilKeterangan:true };
+const KOLOM_TANGGAL_LEBAR = { lebarKey: 'lebarTanggal', label: 'Tanggal' };
+let kolomCetak = {
+  tampilHari:true, tampilJamMasuk:true, tampilStatusMasuk:true, tampilJamPulang:true, tampilStatusPulang:true, tampilDurasi:true, tampilKeterangan:true,
+  lebarTanggal:10, lebarHari:8, lebarJamMasuk:9, lebarStatusMasuk:9, lebarJamPulang:9, lebarStatusPulang:9, lebarDurasi:10, lebarKeterangan:36
+};
 let rekapTerakhir = null; // menyimpan hasil rekap terakhir supaya toggle kolom bisa render ulang tanpa panggil API lagi
 
 // ================= PEMANGGIL API (CORS-SAFE) =================
@@ -371,25 +377,32 @@ function initAdmin(){
 
   muatRiwayatIzin();
   muatPengaturanKolomCetak();
+  muatPengaturanDokumen();
 }
 
 let jadwalKerjaSudahDimuat = false;
 let titikLokasiSudahDimuat = false;
+let guruSudahDimuat = false;
 
 function gantiTabAdmin(tab){
   document.getElementById('tab-btn-rekap').classList.toggle('active', tab === 'rekap');
   document.getElementById('tab-btn-izin').classList.toggle('active', tab === 'izin');
   document.getElementById('tab-btn-jamkerja').classList.toggle('active', tab === 'jamkerja');
   document.getElementById('tab-btn-lokasi').classList.toggle('active', tab === 'lokasi');
+  document.getElementById('tab-btn-guru').classList.toggle('active', tab === 'guru');
   document.getElementById('tab-rekap').style.display = tab === 'rekap' ? '' : 'none';
   document.getElementById('tab-izin').style.display = tab === 'izin' ? '' : 'none';
   document.getElementById('tab-jamkerja').style.display = tab === 'jamkerja' ? '' : 'none';
   document.getElementById('tab-lokasi').style.display = tab === 'lokasi' ? '' : 'none';
+  document.getElementById('tab-guru').style.display = tab === 'guru' ? '' : 'none';
   if (tab === 'jamkerja' && !jadwalKerjaSudahDimuat){
     muatJadwalKerja();
   }
   if (tab === 'lokasi' && !titikLokasiSudahDimuat){
     muatTitikLokasi();
+  }
+  if (tab === 'guru' && !guruSudahDimuat){
+    muatKelolaGuru();
   }
 }
 
@@ -398,10 +411,50 @@ function kodeBadge(kode){
   return '<span class="code-badge code-' + kode + '">' + kode + '</span>';
 }
 
+// ================= PENGATURAN DOKUMEN (Kop Sekolah, Kepala Sekolah) =================
+let dokumenSudahDimuat = false;
+
+function muatPengaturanDokumen(){
+  callApi('getPengaturanDokumen').then(res => {
+    document.getElementById('dok-nama-sekolah').value = res.namaSekolah || '';
+    document.getElementById('dok-kop-sekolah').value = res.kopSekolah || '';
+    document.getElementById('dok-nama-kepsek').value = res.namaKepsek || '';
+    document.getElementById('dok-nip-kepsek').value = res.nipKepsek || '';
+    dokumenSudahDimuat = true;
+  }).catch(() => {});
+}
+
+async function simpanPengaturanDokumen(){
+  // Jaga-jaga: kalau data lama belum sempat termuat (baru buka tab, koneksi
+  // lambat) lalu tombol ini terklik, JANGAN kirim apa pun — supaya tidak
+  // menimpa Nama Sekolah/Kepsek yang sudah ada dengan nilai kosong.
+  if (!dokumenSudahDimuat){
+    tampilkanPesan('dok-error', 'Data belum selesai dimuat, tunggu sebentar lalu coba lagi.', 'error');
+    return;
+  }
+  tampilkanPesan('dok-error', '', 'error');
+  const payload = {
+    namaSekolah: document.getElementById('dok-nama-sekolah').value,
+    namaKepsek: document.getElementById('dok-nama-kepsek').value,
+    nipKepsek: document.getElementById('dok-nip-kepsek').value,
+    kopSekolah: document.getElementById('dok-kop-sekolah').value
+  };
+  try {
+    const res = await callApi('simpanPengaturanDokumen', payload);
+    if (!res.success){ tampilkanPesan('dok-error', res.message, 'error'); return; }
+    tampilkanPesan('dok-success', res.message, 'success');
+  } catch (err){
+    tampilkanPesan('dok-error', 'Gagal menyimpan: ' + err.message, 'error');
+  }
+}
+
 // ================= PENGATURAN KOLOM CETAK =================
+let kolomCetakSudahDimuat = false;
+
 function muatPengaturanKolomCetak(){
   callApi('getPengaturanKolomCetak').then(res => {
     kolomCetak = res;
+    kolomCetakSudahDimuat = true;
     renderToggleKolomUI();
   }).catch(() => {
     renderToggleKolomUI(); // tetap tampilkan toggle dengan default (semua on) kalau gagal memuat
@@ -410,30 +463,58 @@ function muatPengaturanKolomCetak(){
 
 function renderToggleKolomUI(){
   const wrap = document.getElementById('kolom-toggle-list');
-  wrap.innerHTML = KOLOM_CETAK_DAFTAR.map(k =>
+  const barisTanggal =
+    '<div class="toggle-row" data-lebar-only="' + KOLOM_TANGGAL_LEBAR.lebarKey + '">' +
+      '<span>' + KOLOM_TANGGAL_LEBAR.label + ' <span style="color:var(--ink-soft); font-size:11px;">(selalu tampil)</span></span>' +
+      '<div class="toggle-row-kanan">' +
+        '<input type="number" class="lebar-kolom-input" data-lebar="' + KOLOM_TANGGAL_LEBAR.lebarKey + '" value="' + kolomCetak[KOLOM_TANGGAL_LEBAR.lebarKey] + '" min="1" max="100">' +
+        '<span class="lebar-kolom-label">%</span>' +
+      '</div>' +
+    '</div>';
+  const barisLain = KOLOM_CETAK_DAFTAR.map(k =>
     '<div class="toggle-row">' +
       '<span>' + k.label + '</span>' +
-      '<label class="toggle-switch">' +
-        '<input type="checkbox" data-kolom="' + k.key + '" ' + (kolomCetak[k.key] ? 'checked' : '') + '>' +
-        '<span class="toggle-slider"></span>' +
-      '</label>' +
+      '<div class="toggle-row-kanan">' +
+        '<input type="number" class="lebar-kolom-input" data-lebar="' + k.lebarKey + '" value="' + kolomCetak[k.lebarKey] + '" min="1" max="100" ' + (kolomCetak[k.key] ? '' : 'disabled') + '>' +
+        '<span class="lebar-kolom-label">%</span>' +
+        '<label class="toggle-switch">' +
+          '<input type="checkbox" data-kolom="' + k.key + '" ' + (kolomCetak[k.key] ? 'checked' : '') + '>' +
+          '<span class="toggle-slider"></span>' +
+        '</label>' +
+      '</div>' +
     '</div>'
   ).join('');
+  wrap.innerHTML = barisTanggal + barisLain;
+
+  const renderUlangJikaAda = () => {
+    if (rekapTerakhir){
+      renderTabelRekap(rekapTerakhir);
+      renderAreaCetak(rekapTerakhir);
+    }
+  };
 
   wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {
       kolomCetak[cb.getAttribute('data-kolom')] = cb.checked;
-      // Render ulang langsung pakai data yang sudah ada (tanpa panggil API lagi)
-      // supaya tabel di layar & area cetak selalu WYSIWYG dengan toggle terbaru.
-      if (rekapTerakhir){
-        renderTabelRekap(rekapTerakhir);
-        renderAreaCetak(rekapTerakhir);
-      }
+      const inputLebar = cb.closest('.toggle-row-kanan').querySelector('.lebar-kolom-input');
+      if (inputLebar) inputLebar.disabled = !cb.checked;
+      renderUlangJikaAda();
+    });
+  });
+  wrap.querySelectorAll('.lebar-kolom-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const angka = parseFloat(inp.value);
+      if (!isNaN(angka) && angka > 0) kolomCetak[inp.getAttribute('data-lebar')] = angka;
+      renderUlangJikaAda();
     });
   });
 }
 
 async function simpanPengaturanKolomCetak(){
+  if (!kolomCetakSudahDimuat){
+    tampilkanPesan('kolom-cetak-error', 'Data belum selesai dimuat, tunggu sebentar lalu coba lagi.', 'error');
+    return;
+  }
   tampilkanPesan('kolom-cetak-error', '', 'error');
   try {
     const res = await callApi('simpanPengaturanKolomCetak', kolomCetak);
@@ -446,14 +527,14 @@ async function simpanPengaturanKolomCetak(){
 
 /** Daftar kolom yang tampil sekarang, urutan tetap, Tanggal selalu di posisi pertama & tidak bisa dimatikan. */
 function kolomAktif(){
-  const daftar = [{ key: 'tanggal', label: 'Tanggal' }];
-  if (kolomCetak.tampilHari) daftar.push({ key: 'hari', label: 'Hari' });
-  if (kolomCetak.tampilJamMasuk) daftar.push({ key: 'jamMasuk', label: 'Masuk' });
-  if (kolomCetak.tampilStatusMasuk) daftar.push({ key: 'statusMasuk', label: 'Status' });
-  if (kolomCetak.tampilJamPulang) daftar.push({ key: 'jamPulang', label: 'Pulang' });
-  if (kolomCetak.tampilStatusPulang) daftar.push({ key: 'statusPulang', label: 'Status' });
-  if (kolomCetak.tampilDurasi) daftar.push({ key: 'durasi', label: 'Durasi' });
-  if (kolomCetak.tampilKeterangan) daftar.push({ key: 'keterangan', label: 'Keterangan' });
+  const daftar = [{ key: 'tanggal', label: 'Tanggal', lebar: kolomCetak.lebarTanggal }];
+  if (kolomCetak.tampilHari) daftar.push({ key: 'hari', label: 'Hari', lebar: kolomCetak.lebarHari });
+  if (kolomCetak.tampilJamMasuk) daftar.push({ key: 'jamMasuk', label: 'Masuk', lebar: kolomCetak.lebarJamMasuk });
+  if (kolomCetak.tampilStatusMasuk) daftar.push({ key: 'statusMasuk', label: 'Status', lebar: kolomCetak.lebarStatusMasuk });
+  if (kolomCetak.tampilJamPulang) daftar.push({ key: 'jamPulang', label: 'Pulang', lebar: kolomCetak.lebarJamPulang });
+  if (kolomCetak.tampilStatusPulang) daftar.push({ key: 'statusPulang', label: 'Status', lebar: kolomCetak.lebarStatusPulang });
+  if (kolomCetak.tampilDurasi) daftar.push({ key: 'durasi', label: 'Durasi', lebar: kolomCetak.lebarDurasi });
+  if (kolomCetak.tampilKeterangan) daftar.push({ key: 'keterangan', label: 'Keterangan', lebar: kolomCetak.lebarKeterangan });
   return daftar;
 }
 
@@ -502,7 +583,7 @@ async function muatRekap(){
 function renderTabelRekap(rekap){
   const kolom = kolomAktif();
   document.getElementById('tabel-rekap-head').innerHTML =
-    '<tr>' + kolom.map(k => '<th>' + k.label + '</th>').join('') + '</tr>';
+    '<tr>' + kolom.map(k => '<th style="width:' + k.lebar + '%;">' + k.label + '</th>').join('') + '</tr>';
 
   const tbody = document.getElementById('tabel-rekap-body');
   tbody.innerHTML = rekap.rows.map(r => {
@@ -542,7 +623,7 @@ function renderRingkasanKehadiran(r){
 function renderAreaCetak(rekap){
   const el = document.getElementById('area-cetak');
   const kolom = kolomAktif();
-  const headerCetak = '<tr>' + kolom.map(k => '<th>' + k.label + '</th>').join('') + '</tr>';
+  const headerCetak = '<tr>' + kolom.map(k => '<th style="width:' + k.lebar + '%;">' + k.label + '</th>').join('') + '</tr>';
   const baris = rekap.rows.map(r => {
     if (r.statusHari === 'Libur'){
       return '<tr><td>' + r.tanggal + '</td><td colspan="' + (kolom.length - 1) + '">Libur</td></tr>';
@@ -558,15 +639,26 @@ function renderAreaCetak(rekap){
     ['Jumlah Hari Kerja', ring.hariKerja]
   ].map(b => '<tr><td>' + b[0] + '</td><td>' + b[1] + '</td></tr>').join('');
 
+  // Kop sekolah: kalau admin isi (bisa beberapa baris), tampilkan dengan garis
+  // pembatas — konvensi kop surat resmi. Kosong -> fallback tampilan sederhana.
+  const kopLines = String(rekap.kopSekolah || '').split('\n').map(s => s.trim()).filter(s => s);
+  const kopHtml = kopLines.length > 0
+    ? '<div class="cetak-kop">' + kopLines.map((l, idx) =>
+        '<div class="' + (idx < kopLines.length - 1 ? 'kop-baris' : 'kop-baris-akhir') + '">' + l + '</div>'
+      ).join('') + '</div><hr class="cetak-kop-divider">'
+    : '<div class="cetak-sekolah">' + (rekap.namaSekolah || '') + '</div>';
+
+  const labelId = rekap.jenisId || 'NIP';
+
   el.innerHTML =
+    kopHtml +
     '<div class="cetak-judul">LAMPIRAN DAFTAR HADIR GURU (DASAR PENCAIRAN TPG)</div>' +
-    '<div class="cetak-sekolah">' + (rekap.namaSekolah || '') + '</div>' +
-    '<div class="cetak-info">' +
+    '<div class="cetak-info" style="margin-top:8px;">' +
       '<div><b>Nama Guru</b>: ' + rekap.nama + '</div>' +
-      '<div><b>NIP</b>: ' + rekap.nip + '</div>' +
+      '<div><b>' + labelId + '</b>: ' + rekap.nip + '</div>' +
       '<div><b>Bulan</b>: ' + BULAN_NAMA[rekap.bulan - 1] + ' ' + rekap.tahun + '</div>' +
     '</div>' +
-    '<table><thead>' + headerCetak + '</thead>' +
+    '<table class="cetak-tabel-utama"><thead>' + headerCetak + '</thead>' +
     '<tbody>' + baris + '</tbody></table>' +
     '<div class="cetak-ringkasan">' +
       '<b>Ringkasan Kehadiran Bulan Ini</b>' +
@@ -819,5 +911,105 @@ async function simpanTitikLokasi(){
     muatTitikLokasi(); // tampilkan ulang dari server agar terlihat kondisi yang BENAR-BENAR tersimpan
   } catch (err){
     tampilkanPesan('lokasi-error', 'Gagal menyimpan: ' + err.message, 'error');
+  }
+}
+
+// ================= KELOLA GURU (ADMIN) =================
+function muatKelolaGuru(){
+  const wrap = document.getElementById('guru-list');
+  wrap.innerHTML = '<p style="color:var(--ink-soft); font-size:13px;">Memuat daftar guru…</p>';
+  callApi('getDaftarGuruLengkap').then(list => {
+    guruSudahDimuat = true;
+    if (list.length === 0){
+      wrap.innerHTML = '<p style="color:var(--ink-soft); font-size:13px;">Belum ada data guru.</p>';
+      return;
+    }
+    wrap.innerHTML = list.map(g =>
+      '<div class="titik-card" data-nip="' + g.nip + '">' +
+        '<div class="guru-nip-label">NIP/ID: <b>' + g.nip + '</b> <span style="font-weight:400;">(tidak bisa diubah)</span></div>' +
+        '<label>Nama Lengkap</label>' +
+        '<input type="text" class="guru-nama" value="' + (g.nama || '') + '">' +
+        '<div class="field-row">' +
+          '<div>' +
+            '<label>Status Kepegawaian</label>' +
+            '<input type="text" class="guru-status" value="' + (g.statusKepegawaian || '') + '" placeholder="PNS / PPPK / GTT">' +
+          '</div>' +
+          '<div>' +
+            '<label>Jenis ID</label>' +
+            '<select class="guru-jenisid">' +
+              ['NIP','NBM','ID Guru'].map(j => '<option value="' + j + '" ' + (g.jenisId === j ? 'selected' : '') + '>' + j + '</option>').join('') +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="field-row">' +
+          '<div>' +
+            '<label>Role</label>' +
+            '<select class="guru-role">' +
+              ['Guru','Admin'].map(r => '<option value="' + r + '" ' + (g.role === r ? 'selected' : '') + '>' + r + '</option>').join('') +
+            '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label>Password Baru</label>' +
+            '<input type="text" class="guru-password" placeholder="Kosongkan jika tidak ganti">' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    ).join('');
+  }).catch(err => {
+    wrap.innerHTML = '';
+    tampilkanPesan('guru-error', 'Gagal memuat daftar guru: ' + err.message, 'error');
+  });
+}
+
+async function simpanKelolaGuru(){
+  const kartu = document.querySelectorAll('#guru-list .titik-card');
+  if (kartu.length === 0){
+    tampilkanPesan('guru-error', 'Data belum dimuat, coba buka tab ini ulang.', 'error');
+    return;
+  }
+  const guru = Array.from(kartu).map(card => ({
+    nip: card.getAttribute('data-nip'), // dipakai untuk mencocokkan baris, TIDAK diubah
+    nama: card.querySelector('.guru-nama').value,
+    password: card.querySelector('.guru-password').value, // kosong = jangan ganti
+    statusKepegawaian: card.querySelector('.guru-status').value,
+    role: card.querySelector('.guru-role').value,
+    jenisId: card.querySelector('.guru-jenisid').value
+  }));
+
+  tampilkanPesan('guru-error', '', 'error');
+  try {
+    const res = await callApi('simpanDataGuru', { guru });
+    if (!res.success){ tampilkanPesan('guru-error', res.message, 'error'); return; }
+    tampilkanPesan('guru-success', res.message, 'success');
+    muatKelolaGuru(); // muat ulang dari server, sekaligus mengosongkan kolom password yang tadi diisi
+  } catch (err){
+    tampilkanPesan('guru-error', 'Gagal menyimpan: ' + err.message, 'error');
+  }
+}
+
+async function tambahGuruBaru(){
+  const nip = document.getElementById('guru-baru-nip').value.trim();
+  const password = document.getElementById('guru-baru-password').value.trim();
+  const nama = document.getElementById('guru-baru-nama').value.trim();
+  if (!nip || !password || !nama){
+    tampilkanPesan('guru-error', 'NIP, Password, dan Nama wajib diisi untuk guru baru.', 'error');
+    return;
+  }
+  const guruBaru = [{
+    nip, password, nama,
+    statusKepegawaian: document.getElementById('guru-baru-status').value.trim(),
+    role: document.getElementById('guru-baru-role').value,
+    jenisId: document.getElementById('guru-baru-jenisid').value
+  }];
+
+  tampilkanPesan('guru-error', '', 'error');
+  try {
+    const res = await callApi('simpanDataGuru', { guru: guruBaru });
+    if (!res.success){ tampilkanPesan('guru-error', res.message, 'error'); return; }
+    tampilkanPesan('guru-success', 'Guru baru "' + nama + '" berhasil ditambahkan.', 'success');
+    ['guru-baru-nip','guru-baru-password','guru-baru-nama','guru-baru-status'].forEach(id => document.getElementById(id).value = '');
+    muatKelolaGuru();
+  } catch (err){
+    tampilkanPesan('guru-error', 'Gagal menambahkan: ' + err.message, 'error');
   }
 }
