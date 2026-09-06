@@ -155,9 +155,24 @@
 
         <div class="kolom-cetak-panel">
           <div class="kolom-cetak-header">Pengaturan Dokumen <span style="font-weight:400; color:var(--ink-soft);">(berlaku di Preview &amp; Cetak maupun PDF Drive)</span></div>
-          <label>Nama Sekolah <span style="font-weight:400; color:var(--ink-soft); text-transform:none;">(dipakai kalau Kop Sekolah di bawah dikosongkan)</span></label>
+
+          <label>Gambar Kop Surat <span style="font-weight:400; color:var(--ink-soft); text-transform:none;">(opsional — file lengkap: logo + nama instansi + alamat jadi satu gambar)</span></label>
+          <div class="kop-gambar-preview" id="kop-gambar-preview">
+            <span style="color:var(--ink-soft); font-size:12px;">Belum ada gambar kop surat</span>
+          </div>
+          <input type="file" id="kop-gambar-file" accept="image/*" style="display:none;">
+          <div class="action-row" style="margin-top:8px;">
+            <button type="button" class="btn-ghost" onclick="document.getElementById('kop-gambar-file').click()">📤 Pilih Gambar</button>
+            <button type="button" class="btn-ghost" id="btn-hapus-kop-gambar" onclick="hapusGambarKop()" style="display:none; color:var(--rose); border-color:var(--rose-soft);">🗑️ Hapus Gambar</button>
+          </div>
+          <p class="subtitle" style="margin:8px 0 0;">Kalau gambar ini diisi, dipakai <b>apa adanya selebar dokumen</b> menggantikan Nama Sekolah &amp; Kop Sekolah (teks) di bawah — cocok kalau sekolah sudah punya file kop surat resmi sendiri.</p>
+
+          <label style="margin-top:18px;">Judul Dokumen</label>
+          <input id="dok-judul" type="text" placeholder="LAMPIRAN DAFTAR HADIR GURU (DASAR PENCAIRAN TPG)">
+
+          <label>Nama Sekolah <span style="font-weight:400; color:var(--ink-soft); text-transform:none;">(cadangan, dipakai kalau Gambar Kop &amp; Kop Sekolah teks kosong)</span></label>
           <input id="dok-nama-sekolah" type="text" placeholder="Contoh: SD Negeri 1 Contoh">
-          <label>Kop Sekolah</label>
+          <label>Kop Sekolah (Teks) <span style="font-weight:400; color:var(--ink-soft); text-transform:none;">(cadangan, dipakai kalau Gambar Kop di atas kosong)</span></label>
           <textarea id="dok-kop-sekolah" rows="3" placeholder="Kosongkan untuk tampilan sederhana (cuma nama sekolah). Atau isi kop resmi, boleh beberapa baris, misal:&#10;PEMERINTAH KABUPATEN...&#10;DINAS PENDIDIKAN...&#10;SD/SMP/SMA NAMA SEKOLAH"></textarea>
           <div class="field-row">
             <div>
@@ -297,12 +312,16 @@
                 <option value="NIP">NIP</option>
                 <option value="NBM">NBM</option>
                 <option value="ID Guru">ID Guru</option>
+                <option value="ID Staf">ID Staf</option>
+                <option value="ID KS">ID KS</option>
               </select>
             </div>
           </div>
           <label>Role</label>
           <select id="guru-baru-role">
             <option value="Guru">Guru</option>
+            <option value="Staf">Staf</option>
+            <option value="KS">KS (Kepala Sekolah)</option>
             <option value="Admin">Admin</option>
           </select>
           <button class="btn-primary" style="margin-top:14px;" onclick="tambahGuruBaru()">Tambah Guru</button>
