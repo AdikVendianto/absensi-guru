@@ -413,6 +413,7 @@ function kodeBadge(kode){
 
 // ================= PENGATURAN DOKUMEN (Kop Sekolah, Kepala Sekolah) =================
 let dokumenSudahDimuat = false;
+let logoKopUrlSaatIni = ''; // dipakai renderAreaCetak & untuk tahu apakah tombol Hapus perlu ditampilkan
 
 function muatPengaturanDokumen(){
   callApi('getPengaturanDokumen').then(res => {
@@ -420,8 +421,69 @@ function muatPengaturanDokumen(){
     document.getElementById('dok-kop-sekolah').value = res.kopSekolah || '';
     document.getElementById('dok-nama-kepsek').value = res.namaKepsek || '';
     document.getElementById('dok-nip-kepsek').value = res.nipKepsek || '';
+    document.getElementById('dok-judul').value = res.judulDokumen || '';
+    logoKopUrlSaatIni = res.logoKopUrl || '';
+    tampilkanPreviewKopGambar(logoKopUrlSaatIni);
     dokumenSudahDimuat = true;
   }).catch(() => {});
+}
+
+function tampilkanPreviewKopGambar(url){
+  const preview = document.getElementById('kop-gambar-preview');
+  const btnHapus = document.getElementById('btn-hapus-kop-gambar');
+  if (url){
+    preview.innerHTML = '<img src="' + url + '" alt="Kop Surat">';
+    btnHapus.style.display = '';
+  } else {
+    preview.innerHTML = '<span style="color:var(--ink-soft); font-size:12px;">Belum ada gambar kop surat</span>';
+    btnHapus.style.display = 'none';
+  }
+}
+
+// Upload dipicu otomatis begitu file dipilih (tidak perlu tombol Simpan
+// terpisah) — supaya admin langsung lihat hasilnya di preview seketika itu juga.
+document.addEventListener('DOMContentLoaded', () => {
+  const inputFile = document.getElementById('kop-gambar-file');
+  if (inputFile){
+    inputFile.addEventListener('change', () => {
+      const file = inputFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const preview = document.getElementById('kop-gambar-preview');
+        preview.innerHTML = '<span style="color:var(--ink-soft); font-size:12px;"><span class="spinner" style="border-top-color:var(--navy); border-color:rgba(22,35,63,.25);"></span>Mengunggah…</span>';
+        try {
+          const res = await callApi('simpanLogoKop', { fotoBase64: reader.result });
+          if (!res.success){
+            tampilkanPesan('dok-error', res.message, 'error');
+            tampilkanPreviewKopGambar(logoKopUrlSaatIni);
+            return;
+          }
+          logoKopUrlSaatIni = res.url;
+          tampilkanPreviewKopGambar(logoKopUrlSaatIni);
+          tampilkanPesan('dok-success', 'Gambar kop surat berhasil diunggah.', 'success');
+        } catch (err){
+          tampilkanPesan('dok-error', 'Gagal mengunggah: ' + err.message, 'error');
+          tampilkanPreviewKopGambar(logoKopUrlSaatIni);
+        }
+        inputFile.value = ''; // reset supaya bisa pilih file yang sama lagi kalau perlu
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+});
+
+async function hapusGambarKop(){
+  tampilkanPesan('dok-error', '', 'error');
+  try {
+    const res = await callApi('hapusLogoKop');
+    if (!res.success){ tampilkanPesan('dok-error', res.message, 'error'); return; }
+    logoKopUrlSaatIni = '';
+    tampilkanPreviewKopGambar('');
+    tampilkanPesan('dok-success', res.message, 'success');
+  } catch (err){
+    tampilkanPesan('dok-error', 'Gagal menghapus: ' + err.message, 'error');
+  }
 }
 
 async function simpanPengaturanDokumen(){
@@ -437,7 +499,8 @@ async function simpanPengaturanDokumen(){
     namaSekolah: document.getElementById('dok-nama-sekolah').value,
     namaKepsek: document.getElementById('dok-nama-kepsek').value,
     nipKepsek: document.getElementById('dok-nip-kepsek').value,
-    kopSekolah: document.getElementById('dok-kop-sekolah').value
+    kopSekolah: document.getElementById('dok-kop-sekolah').value,
+    judulDokumen: document.getElementById('dok-judul').value
   };
   try {
     const res = await callApi('simpanPengaturanDokumen', payload);
@@ -639,20 +702,28 @@ function renderAreaCetak(rekap){
     ['Jumlah Hari Kerja', ring.hariKerja]
   ].map(b => '<tr><td>' + b[0] + '</td><td>' + b[1] + '</td></tr>').join('');
 
-  // Kop sekolah: kalau admin isi (bisa beberapa baris), tampilkan dengan garis
-  // pembatas — konvensi kop surat resmi. Kosong -> fallback tampilan sederhana.
-  const kopLines = String(rekap.kopSekolah || '').split('\n').map(s => s.trim()).filter(s => s);
-  const kopHtml = kopLines.length > 0
-    ? '<div class="cetak-kop">' + kopLines.map((l, idx) =>
-        '<div class="' + (idx < kopLines.length - 1 ? 'kop-baris' : 'kop-baris-akhir') + '">' + l + '</div>'
-      ).join('') + '</div><hr class="cetak-kop-divider">'
-    : '<div class="cetak-sekolah">' + (rekap.namaSekolah || '') + '</div>';
+  // Prioritas kop surat: (1) gambar kop utuh yang diunggah admin — dipakai
+  // apa adanya selebar dokumen (biasanya sudah berisi logo+nama instansi+alamat
+  // sekaligus, jadi teks kop di bawah TIDAK ditampilkan lagi supaya tidak dobel);
+  // (2) teks Kop Sekolah (bisa beberapa baris); (3) fallback nama sekolah saja.
+  let kopHtml;
+  if (rekap.logoKopUrl) {
+    kopHtml = '<img class="cetak-kop-gambar" src="' + rekap.logoKopUrl + '" alt="Kop Surat">';
+  } else {
+    const kopLines = String(rekap.kopSekolah || '').split('\n').map(s => s.trim()).filter(s => s);
+    kopHtml = kopLines.length > 0
+      ? '<div class="cetak-kop">' + kopLines.map((l, idx) =>
+          '<div class="' + (idx < kopLines.length - 1 ? 'kop-baris' : 'kop-baris-akhir') + '">' + l + '</div>'
+        ).join('') + '</div><hr class="cetak-kop-divider">'
+      : '<div class="cetak-sekolah">' + (rekap.namaSekolah || '') + '</div>';
+  }
 
   const labelId = rekap.jenisId || 'NIP';
+  const judul = rekap.judulDokumen || 'LAMPIRAN DAFTAR HADIR GURU (DASAR PENCAIRAN TPG)';
 
   el.innerHTML =
     kopHtml +
-    '<div class="cetak-judul">LAMPIRAN DAFTAR HADIR GURU (DASAR PENCAIRAN TPG)</div>' +
+    '<div class="cetak-judul">' + judul + '</div>' +
     '<div class="cetak-info" style="margin-top:8px;">' +
       '<div><b>Nama Guru</b>: ' + rekap.nama + '</div>' +
       '<div><b>' + labelId + '</b>: ' + rekap.nip + '</div>' +
@@ -937,7 +1008,7 @@ function muatKelolaGuru(){
           '<div>' +
             '<label>Jenis ID</label>' +
             '<select class="guru-jenisid">' +
-              ['NIP','NBM','ID Guru'].map(j => '<option value="' + j + '" ' + (g.jenisId === j ? 'selected' : '') + '>' + j + '</option>').join('') +
+              ['NIP','NBM','ID Guru','ID Staf','ID KS'].map(j => '<option value="' + j + '" ' + (g.jenisId === j ? 'selected' : '') + '>' + j + '</option>').join('') +
             '</select>' +
           '</div>' +
         '</div>' +
@@ -945,7 +1016,7 @@ function muatKelolaGuru(){
           '<div>' +
             '<label>Role</label>' +
             '<select class="guru-role">' +
-              ['Guru','Admin'].map(r => '<option value="' + r + '" ' + (g.role === r ? 'selected' : '') + '>' + r + '</option>').join('') +
+              [['Guru','Guru'],['Staf','Staf'],['KS','KS (Kepala Sekolah)'],['Admin','Admin']].map(r => '<option value="' + r[0] + '" ' + (g.role === r[0] ? 'selected' : '') + '>' + r[1] + '</option>').join('') +
             '</select>' +
           '</div>' +
           '<div>' +
