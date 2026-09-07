@@ -413,7 +413,7 @@ function kodeBadge(kode){
 
 // ================= PENGATURAN DOKUMEN (Kop Sekolah, Kepala Sekolah) =================
 let dokumenSudahDimuat = false;
-let logoKopUrlSaatIni = ''; // dipakai renderAreaCetak & untuk tahu apakah tombol Hapus perlu ditampilkan
+let logoKopDataUriSaatIni = ''; // dipakai renderAreaCetak & untuk tahu apakah tombol Hapus perlu ditampilkan
 
 function muatPengaturanDokumen(){
   callApi('getPengaturanDokumen').then(res => {
@@ -422,17 +422,17 @@ function muatPengaturanDokumen(){
     document.getElementById('dok-nama-kepsek').value = res.namaKepsek || '';
     document.getElementById('dok-nip-kepsek').value = res.nipKepsek || '';
     document.getElementById('dok-judul').value = res.judulDokumen || '';
-    logoKopUrlSaatIni = res.logoKopUrl || '';
-    tampilkanPreviewKopGambar(logoKopUrlSaatIni);
+    logoKopDataUriSaatIni = res.logoKopDataUri || '';
+    tampilkanPreviewKopGambar(logoKopDataUriSaatIni);
     dokumenSudahDimuat = true;
   }).catch(() => {});
 }
 
-function tampilkanPreviewKopGambar(url){
+function tampilkanPreviewKopGambar(dataUri){
   const preview = document.getElementById('kop-gambar-preview');
   const btnHapus = document.getElementById('btn-hapus-kop-gambar');
-  if (url){
-    preview.innerHTML = '<img src="' + url + '" alt="Kop Surat">';
+  if (dataUri){
+    preview.innerHTML = '<img src="' + dataUri + '" alt="Kop Surat">';
     btnHapus.style.display = '';
   } else {
     preview.innerHTML = '<span style="color:var(--ink-soft); font-size:12px;">Belum ada gambar kop surat</span>';
@@ -456,15 +456,15 @@ document.addEventListener('DOMContentLoaded', () => {
           const res = await callApi('simpanLogoKop', { fotoBase64: reader.result });
           if (!res.success){
             tampilkanPesan('dok-error', res.message, 'error');
-            tampilkanPreviewKopGambar(logoKopUrlSaatIni);
+            tampilkanPreviewKopGambar(logoKopDataUriSaatIni);
             return;
           }
-          logoKopUrlSaatIni = res.url;
-          tampilkanPreviewKopGambar(logoKopUrlSaatIni);
+          logoKopDataUriSaatIni = res.dataUri;
+          tampilkanPreviewKopGambar(logoKopDataUriSaatIni);
           tampilkanPesan('dok-success', 'Gambar kop surat berhasil diunggah.', 'success');
         } catch (err){
           tampilkanPesan('dok-error', 'Gagal mengunggah: ' + err.message, 'error');
-          tampilkanPreviewKopGambar(logoKopUrlSaatIni);
+          tampilkanPreviewKopGambar(logoKopDataUriSaatIni);
         }
         inputFile.value = ''; // reset supaya bisa pilih file yang sama lagi kalau perlu
       };
@@ -478,7 +478,7 @@ async function hapusGambarKop(){
   try {
     const res = await callApi('hapusLogoKop');
     if (!res.success){ tampilkanPesan('dok-error', res.message, 'error'); return; }
-    logoKopUrlSaatIni = '';
+    logoKopDataUriSaatIni = '';
     tampilkanPreviewKopGambar('');
     tampilkanPesan('dok-success', res.message, 'success');
   } catch (err){
@@ -707,8 +707,8 @@ function renderAreaCetak(rekap){
   // sekaligus, jadi teks kop di bawah TIDAK ditampilkan lagi supaya tidak dobel);
   // (2) teks Kop Sekolah (bisa beberapa baris); (3) fallback nama sekolah saja.
   let kopHtml;
-  if (rekap.logoKopUrl) {
-    kopHtml = '<img class="cetak-kop-gambar" src="' + rekap.logoKopUrl + '" alt="Kop Surat">';
+  if (rekap.logoKopDataUri) {
+    kopHtml = '<img class="cetak-kop-gambar" src="' + rekap.logoKopDataUri + '" alt="Kop Surat">';
   } else {
     const kopLines = String(rekap.kopSekolah || '').split('\n').map(s => s.trim()).filter(s => s);
     kopHtml = kopLines.length > 0
