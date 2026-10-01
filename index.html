@@ -148,11 +148,6 @@
           <button type="button" class="orientasi-btn" id="btn-orientasi-landscape" onclick="setOrientasi('landscape')">📃 Landscape</button>
         </div>
 
-        <button class="btn-primary" onclick="muatRekap()">Tampilkan Rekap</button>
-        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-preview-cetak" onclick="previewCetak()" disabled>🖨️ Preview &amp; Cetak</button>
-        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-cetak-pdf" onclick="cetakPDF()" disabled>Simpan PDF ke Drive</button>
-        <a id="link-pdf-siap" class="tombol-pdf-siap" style="display:none;" target="_blank" rel="noopener">📄 Buka / Cetak PDF yang Sudah Dibuat</a>
-
         <div class="kolom-cetak-panel">
           <div class="kolom-cetak-header">Pengaturan Dokumen <span style="font-weight:400; color:var(--ink-soft);">(berlaku di Preview &amp; Cetak maupun PDF Drive)</span></div>
 
@@ -196,6 +191,11 @@
           <div id="kolom-cetak-error" class="error-msg"></div>
           <div id="kolom-cetak-success" class="success-msg"></div>
         </div>
+
+        <button class="btn-primary" style="margin-top:18px;" onclick="muatRekap()">Tampilkan Rekap</button>
+        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-preview-cetak" onclick="previewCetak()" disabled>🖨️ Preview &amp; Cetak</button>
+        <button class="btn-ghost btn-block" style="margin-top:10px;" id="btn-cetak-pdf" onclick="cetakPDF()" disabled>Simpan PDF ke Drive</button>
+        <a id="link-pdf-siap" class="tombol-pdf-siap" style="display:none;" target="_blank" rel="noopener">📄 Buka / Cetak PDF yang Sudah Dibuat</a>
 
         <div id="rekap-error" class="error-msg"></div>
         <div id="rekap-success" class="success-msg"></div>
