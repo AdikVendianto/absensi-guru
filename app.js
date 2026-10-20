@@ -378,6 +378,7 @@ function initAdmin(){
   muatRiwayatIzin();
   muatPengaturanKolomCetak();
   muatPengaturanDokumen();
+  muatPengaturanHitungKehadiran();
 }
 
 let jadwalKerjaSudahDimuat = false;
@@ -511,6 +512,64 @@ async function simpanPengaturanDokumen(){
   }
 }
 
+// ================= PENGATURAN PERHITUNGAN JUMLAH KEHADIRAN =================
+const HITUNG_KEHADIRAN_DAFTAR = [
+  { key: 'hitungH', label: 'H — Hadir Tepat Waktu' },
+  { key: 'hitungHT', label: 'HT — Hadir Terlambat' },
+  { key: 'hitungPA', label: 'PA — Pulang Cepat' },
+  { key: 'hitungDL', label: 'DL — Dinas Luar' },
+  { key: 'hitungC', label: 'C — Cuti' }
+];
+let hitungKehadiran = { hitungH: true, hitungHT: true, hitungPA: false, hitungDL: false, hitungC: false };
+let hitungSudahDimuat = false;
+
+function muatPengaturanHitungKehadiran(){
+  callApi('getPengaturanHitungKehadiran').then(res => {
+    hitungKehadiran = res;
+    hitungSudahDimuat = true;
+    renderToggleHitungUI();
+  }).catch(() => {
+    renderToggleHitungUI(); // tetap tampilkan toggle dengan default (H + HT) kalau gagal memuat
+  });
+}
+
+function renderToggleHitungUI(){
+  const wrap = document.getElementById('hitung-toggle-list');
+  wrap.innerHTML = HITUNG_KEHADIRAN_DAFTAR.map(k =>
+    '<div class="toggle-row">' +
+      '<span>' + k.label + '</span>' +
+      '<label class="toggle-switch">' +
+        '<input type="checkbox" data-hitung="' + k.key + '" ' + (hitungKehadiran[k.key] ? 'checked' : '') + '>' +
+        '<span class="toggle-slider"></span>' +
+      '</label>' +
+    '</div>'
+  ).join('');
+  wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      hitungKehadiran[cb.getAttribute('data-hitung')] = cb.checked;
+    });
+  });
+}
+
+async function simpanPengaturanHitungKehadiran(){
+  // Sama seperti panel pengaturan lain: jangan kirim apa pun kalau data lama
+  // belum sempat termuat, supaya tidak menimpa pilihan tersimpan dengan default.
+  if (!hitungSudahDimuat){
+    tampilkanPesan('hitung-error', 'Data belum selesai dimuat, tunggu sebentar lalu coba lagi.', 'error');
+    return;
+  }
+  tampilkanPesan('hitung-error', '', 'error');
+  try {
+    const res = await callApi('simpanPengaturanHitungKehadiran', hitungKehadiran);
+    if (!res.success){ tampilkanPesan('hitung-error', res.message, 'error'); return; }
+    tampilkanPesan('hitung-success', res.message, 'success');
+    // Kalau rekap sedang tampil, muat ulang supaya angka total langsung mengikuti pilihan baru.
+    if (rekapTerakhir) muatRekap();
+  } catch (err){
+    tampilkanPesan('hitung-error', 'Gagal menyimpan: ' + err.message, 'error');
+  }
+}
+
 // ================= PENGATURAN KOLOM CETAK =================
 let kolomCetakSudahDimuat = false;
 
@@ -588,9 +647,14 @@ async function simpanPengaturanKolomCetak(){
   }
 }
 
-/** Daftar kolom yang tampil sekarang, urutan tetap, Tanggal selalu di posisi pertama & tidak bisa dimatikan. */
+/** Daftar kolom yang tampil sekarang, urutan tetap. "No" (nomor urut) dan
+ *  Tanggal selalu tampil & tidak bisa dimatikan; lebar "No" sengaja tetap kecil
+ *  dan tidak bisa diatur (cuma nomor urut baris, tidak butuh ruang). */
 function kolomAktif(){
-  const daftar = [{ key: 'tanggal', label: 'Tanggal', lebar: kolomCetak.lebarTanggal }];
+  const daftar = [
+    { key: 'no', label: 'No', lebar: 4 },
+    { key: 'tanggal', label: 'Tanggal', lebar: kolomCetak.lebarTanggal }
+  ];
   if (kolomCetak.tampilHari) daftar.push({ key: 'hari', label: 'Hari', lebar: kolomCetak.lebarHari });
   if (kolomCetak.tampilJamMasuk) daftar.push({ key: 'jamMasuk', label: 'Masuk', lebar: kolomCetak.lebarJamMasuk });
   if (kolomCetak.tampilStatusMasuk) daftar.push({ key: 'statusMasuk', label: 'Status', lebar: kolomCetak.lebarStatusMasuk });
@@ -601,9 +665,10 @@ function kolomAktif(){
   return daftar;
 }
 
-function nilaiSelKolom(r, key, untukCetak){
+function nilaiSelKolom(r, key, untukCetak, idx){
   const ket = r.keterangan || (r.statusHari === 'A' ? 'Alpa' : (r.statusHari === 'DL' ? 'Dinas Luar' : (r.statusHari === 'C' ? 'Cuti' : '')));
   switch (key){
+    case 'no': return idx + 1;
     case 'tanggal': return r.tanggal;
     case 'hari': return r.hari;
     case 'jamMasuk': return r.jamMasuk || '-';
@@ -649,11 +714,11 @@ function renderTabelRekap(rekap){
     '<tr>' + kolom.map(k => '<th style="width:' + k.lebar + '%;">' + k.label + '</th>').join('') + '</tr>';
 
   const tbody = document.getElementById('tabel-rekap-body');
-  tbody.innerHTML = rekap.rows.map(r => {
+  tbody.innerHTML = rekap.rows.map((r, idx) => {
     if (r.statusHari === 'Libur'){
-      return '<tr><td>' + r.tanggal + '</td><td colspan="' + (kolom.length - 1) + '" style="color:var(--ink-soft);">Libur</td></tr>';
+      return '<tr><td>' + (idx + 1) + '</td><td>' + r.tanggal + '</td><td colspan="' + (kolom.length - 2) + '" style="color:var(--ink-soft);">Libur</td></tr>';
     }
-    return '<tr>' + kolom.map(k => '<td>' + nilaiSelKolom(r, k.key, false) + '</td>').join('') + '</tr>';
+    return '<tr>' + kolom.map(k => '<td>' + nilaiSelKolom(r, k.key, false, idx) + '</td>').join('') + '</tr>';
   }).join('');
 }
 
@@ -670,11 +735,11 @@ function renderRingkasanKehadiran(r){
       '<div class="ringkasan-item"><div class="n">' + r.C + '</div><div class="l">Cuti (C)</div></div>' +
     '</div>' +
     (r.pulangTidakTercatat > 0
-      ? '<div class="ringkasan-catatan">Termasuk ' + r.pulangTidakTercatat + ' hari dengan catatan "Pulang tidak tercatat" (tetap dihitung H/HT).</div>'
+      ? '<div class="ringkasan-catatan">Termasuk ' + r.pulangTidakTercatat + ' hari dengan catatan "Pulang tidak tercatat" (statusnya tetap H/HT mengikuti absen masuk).</div>'
       : '') +
     '<div class="ringkasan-total">' +
       '<div class="n">' + r.jumlahKehadiran + ' <span style="font-size:14px; font-weight:500;">/ ' + r.hariKerja + ' hari kerja</span></div>' +
-      '<div class="l">Total Jumlah Kehadiran (H + HT) — untuk penghitungan TPP</div>' +
+      '<div class="l">Total Jumlah Kehadiran (' + r.labelHitung + ') — untuk penghitungan TPP</div>' +
     '</div>';
   el.style.display = 'block';
 }
@@ -687,11 +752,11 @@ function renderAreaCetak(rekap){
   const el = document.getElementById('area-cetak');
   const kolom = kolomAktif();
   const headerCetak = '<tr>' + kolom.map(k => '<th style="width:' + k.lebar + '%;">' + k.label + '</th>').join('') + '</tr>';
-  const baris = rekap.rows.map(r => {
+  const baris = rekap.rows.map((r, idx) => {
     if (r.statusHari === 'Libur'){
-      return '<tr><td>' + r.tanggal + '</td><td colspan="' + (kolom.length - 1) + '">Libur</td></tr>';
+      return '<tr><td>' + (idx + 1) + '</td><td>' + r.tanggal + '</td><td colspan="' + (kolom.length - 2) + '">Libur</td></tr>';
     }
-    return '<tr>' + kolom.map(k => '<td>' + nilaiSelKolom(r, k.key, true) + '</td>').join('') + '</tr>';
+    return '<tr>' + kolom.map(k => '<td>' + nilaiSelKolom(r, k.key, true, idx) + '</td>').join('') + '</tr>';
   }).join('');
 
   const ring = rekap.ringkasan;
@@ -734,7 +799,7 @@ function renderAreaCetak(rekap){
     '<div class="cetak-ringkasan">' +
       '<b>Ringkasan Kehadiran Bulan Ini</b>' +
       '<table>' + ringkasanBaris +
-        '<tr class="total-row"><td>TOTAL JUMLAH KEHADIRAN (H + HT)</td><td>' + ring.jumlahKehadiran + '</td></tr>' +
+        '<tr class="total-row"><td>TOTAL JUMLAH KEHADIRAN (' + ring.labelHitung + ')</td><td>' + ring.jumlahKehadiran + '</td></tr>' +
       '</table>' +
     '</div>' +
     '<div class="cetak-ttd">' +
